@@ -6,18 +6,22 @@ Estado: ✅ hecho · 🚧 en progreso · ⬜ pendiente
 - ✅ Arquitectura mobile (Expo Router + TS strict)
 - ✅ Design System (tokens, tipografía, motion, dark/light)
 - ✅ Navegación base con botón central IA
-- ✅ Onboarding animado
+- ✅ Onboarding real que captura datos del usuario (§26) + "explorar con ejemplo"
+- ✅ Primer uso guiado: tarjeta "Primeros pasos" en Home (§33)
+- ✅ Persistencia local (AsyncStorage) — los datos sobreviven reinicios
 - ⬜ Auth real (pendiente backend)
 
 ## Fase 2 — Dinero ✅ (núcleo) / 🚧
 - ✅ Financial Engine + Safe To Spend (determinístico, testeado)
-- ✅ Home interactivo con datos demo
+- ✅ Home interactivo personalizado con los datos del usuario
 - ✅ Movimientos (lista, resumen, secciones)
-- 🚧 Crear movimiento (manual / texto / voz / escaneo) — UI base
+- ✅ CRUD de movimientos: crear (form con categorías), ver detalle, eliminar
+- 🚧 Registro por texto / voz / escaneo (manual listo; NLP en Fase 5)
 - ⬜ Recurrentes y presupuestos editables
 
 ## Fase 3 — Metas y compromisos 🚧
 - ✅ Metas (lista + detalle con journey)
+- ✅ CRUD de metas: crear, aportar, eliminar
 - ✅ Escenario "aporte extra" en vivo
 - ⬜ Calendario financiero
 - ⬜ Deudas (camino para salir de deuda)

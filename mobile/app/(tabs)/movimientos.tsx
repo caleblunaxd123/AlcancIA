@@ -1,7 +1,9 @@
-import { SectionList, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, SectionList, View } from 'react-native';
 
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
+import { Icon } from '@/components/common/Icon';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
 import { TransactionRow } from '@/components/financial/TransactionRow';
@@ -10,8 +12,25 @@ import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
 import { formatDayMonth } from '@/utils/date';
 
+function AddButton() {
+  const theme = useTheme();
+  const router = useRouter();
+  return (
+    <Pressable
+      onPress={() => router.push('/movimiento/nuevo')}
+      accessibilityRole="button"
+      accessibilityLabel="Nuevo movimiento"
+      hitSlop={8}
+      style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.brand.soft, borderWidth: 1, borderColor: theme.colors.border.active }}
+    >
+      <Icon name="plus" size={22} color="brand" />
+    </Pressable>
+  );
+}
+
 export default function Movimientos() {
   const theme = useTheme();
+  const router = useRouter();
   const snapshot = useFinancialStore((s) => s.snapshot);
   const txs = snapshot.transactions;
 
@@ -35,6 +54,7 @@ export default function Movimientos() {
           title="Todavía está tranquilo por aquí 🌱"
           body="Registra tu primer gasto y AlcancIA comenzará a entender tu dinero."
           actionLabel="Registrar gasto"
+          onAction={() => router.push('/movimiento/nuevo')}
         />
       </Screen>
     );
@@ -49,9 +69,10 @@ export default function Movimientos() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={{ marginBottom: theme.spacing.lg }}>
-            <Text variant="title" style={{ marginBottom: theme.spacing.lg }}>
-              Movimientos
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.lg }}>
+              <Text variant="title">Movimientos</Text>
+              <AddButton />
+            </View>
             <Card>
               <View style={{ flexDirection: 'row' }}>
                 <View style={{ flex: 1, gap: theme.spacing.xxs }}>
@@ -77,7 +98,11 @@ export default function Movimientos() {
             {section.title}
           </Text>
         )}
-        renderItem={({ item }) => <TransactionRow transaction={item} />}
+        renderItem={({ item }) => (
+          <Pressable onPress={() => router.push({ pathname: '/movimiento/[id]', params: { id: item.id } })} accessibilityRole="button">
+            <TransactionRow transaction={item} />
+          </Pressable>
+        )}
         ItemSeparatorComponent={() => (
           <View style={{ height: 1, backgroundColor: theme.colors.border.subtle }} />
         )}
@@ -89,8 +114,9 @@ export default function Movimientos() {
 function Header() {
   const theme = useTheme();
   return (
-    <View style={{ padding: theme.spacing.xl }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.xl }}>
       <Text variant="title">Movimientos</Text>
+      <AddButton />
     </View>
   );
 }

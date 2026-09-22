@@ -25,6 +25,7 @@ export default function Metas() {
           body="Crea tu primera meta y AlcancIA te mostrará el camino para llegar."
           actionLabel="Crear meta"
           mood="happy"
+          onAction={() => router.push('/meta/nueva')}
         />
       </Screen>
     );
@@ -48,7 +49,7 @@ export default function Metas() {
           ))}
         </View>
 
-        <Button label="Nueva meta" icon="plus" variant="secondary" fullWidth onPress={() => {}} />
+        <Button label="Nueva meta" icon="plus" variant="secondary" fullWidth onPress={() => router.push('/meta/nueva')} />
       </ScrollView>
     </Screen>
   );

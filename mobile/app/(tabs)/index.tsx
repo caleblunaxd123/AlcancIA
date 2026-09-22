@@ -9,18 +9,26 @@ import { GoalCard } from '@/components/financial/GoalCard';
 import { InsightCard } from '@/components/financial/InsightCard';
 import { SafeToSpendCard } from '@/components/financial/SafeToSpendCard';
 import { UpcomingPayment } from '@/components/financial/UpcomingPayment';
+import { FirstStepsCard } from '@/components/financial/FirstStepsCard';
 import { Screen } from '@/components/common/Screen';
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { Text } from '@/components/common/Text';
-import { demoUser } from '@/data/demo';
 import { useHomeData } from '@/features/home/useHomeData';
+import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
 import { greeting } from '@/utils/greeting';
+
+const TOTAL_STEPS = 4;
 
 export default function Home() {
   const theme = useTheme();
   const router = useRouter();
   const { weather, insights, health, savingsProgress, nextPayment, topGoals } = useHomeData();
+  const name = useAppStore((s) => s.name);
+  const completedSteps = useAppStore((s) => s.completedSteps);
+  const stepsDismissed = useAppStore((s) => s.stepsDismissed);
+  const showSteps = !stepsDismissed && completedSteps.length < TOTAL_STEPS;
+  const displayName = name || 'ahí';
 
   let delay = 0;
   const nextDelay = () => {
@@ -39,7 +47,7 @@ export default function Home() {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
             <View style={{ flex: 1 }}>
               <Text variant="title">
-                {greeting()}, {demoUser.name} 👋
+                {greeting()}, {displayName} 👋
               </Text>
             </View>
             <Pressable
@@ -68,6 +76,13 @@ export default function Home() {
           <SafeToSpendCard result={weather.safeToSpend} onAskCanIBuy={() => router.push('/puedo-comprarlo')} />
         </Animated.View>
 
+        {/* First-run guidance — helps a brand-new user know what to do next. */}
+        {showSteps ? (
+          <Animated.View entering={nextDelay()}>
+            <FirstStepsCard />
+          </Animated.View>
+        ) : null}
+
         {/* Financial house */}
         <Animated.View entering={nextDelay()}>
           <SectionHeader title="Tu casa" />
@@ -93,14 +108,16 @@ export default function Home() {
         ) : null}
 
         {/* Goals */}
-        <Animated.View entering={nextDelay()}>
-          <SectionHeader title="Metas" actionLabel="Ver todas" onAction={() => router.push('/(tabs)/metas')} />
-          <View style={{ gap: theme.spacing.md }}>
-            {topGoals.map((g) => (
-              <GoalCard key={g.id} goal={g} onPress={() => router.push(`/meta/${g.id}`)} />
-            ))}
-          </View>
-        </Animated.View>
+        {topGoals.length > 0 ? (
+          <Animated.View entering={nextDelay()}>
+            <SectionHeader title="Metas" actionLabel="Ver todas" onAction={() => router.push('/(tabs)/metas')} />
+            <View style={{ gap: theme.spacing.md }}>
+              {topGoals.map((g) => (
+                <GoalCard key={g.id} goal={g} onPress={() => router.push(`/meta/${g.id}`)} />
+              ))}
+            </View>
+          </Animated.View>
+        ) : null}
 
         {/* Insights */}
         {insights.length > 0 ? (

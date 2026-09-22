@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { AlcanciaMascot, type MascotMood } from '@/components/financial/AlcanciaMascot';
@@ -25,6 +25,21 @@ export default function GoalDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goal = useFinancialStore((s) => s.snapshot.goals.find((g) => g.id === id));
   const contribute = useFinancialStore((s) => s.contributeToGoal);
+  const deleteGoal = useFinancialStore((s) => s.deleteGoal);
+
+  const confirmDelete = () => {
+    Alert.alert('Eliminar meta', '¿Seguro que quieres eliminar esta meta?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          if (id) deleteGoal(id);
+          router.back();
+        },
+      },
+    ]);
+  };
 
   const [extra, setExtra] = useState(0);
   const [mood, setMood] = useState<MascotMood>('neutral');
@@ -64,6 +79,9 @@ export default function GoalDetail() {
         <Text variant="subtitle" style={{ flex: 1 }}>
           {goal.name}
         </Text>
+        <Pressable onPress={confirmDelete} accessibilityRole="button" accessibilityLabel="Eliminar meta" hitSlop={10}>
+          <Icon name="trash-2" size={22} color="muted" />
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false}>

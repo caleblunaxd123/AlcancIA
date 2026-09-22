@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -15,6 +15,7 @@ import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
 import { fromMajor, toMajor } from '@/engine/money';
 import { simulatePurchase, type PurchaseVerdict } from '@/engine/purchase';
+import { useAppStore } from '@/store/appStore';
 import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
 
@@ -36,6 +37,11 @@ export default function CanIBuyIt() {
   const theme = useTheme();
   const router = useRouter();
   const snapshot = useFinancialStore((s) => s.snapshot);
+  const completeStep = useAppStore((s) => s.completeStep);
+
+  useEffect(() => {
+    completeStep('review');
+  }, [completeStep]);
 
   const safeMajor = toMajor(snapshot.currentBalance);
   const sliderMax = Math.max(2000, Math.round(safeMajor));

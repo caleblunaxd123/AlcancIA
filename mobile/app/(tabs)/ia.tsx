@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -13,6 +13,7 @@ import { formatMoney } from '@/engine/money';
 import { deriveWeather } from '@/engine/weather';
 import { projectGoal } from '@/engine/goals';
 import { askAlcancIA, type AiAnswer } from '@/services/ai';
+import { useAppStore } from '@/store/appStore';
 import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
 import { formatMonthYear } from '@/utils/date';
@@ -71,6 +72,11 @@ export default function AssistantHome() {
   const [answer, setAnswer] = useState<AiAnswer | null>(null);
   const [loading, setLoading] = useState(false);
   const [mood, setMood] = useState<MascotMood>('happy');
+  const completeStep = useAppStore((s) => s.completeStep);
+
+  useEffect(() => {
+    completeStep('ask-ai');
+  }, [completeStep]);
 
   const respond = async (key: string, label: string) => {
     if (key === 'buy') {

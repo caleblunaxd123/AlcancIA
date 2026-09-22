@@ -10,6 +10,8 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   moduleNameMapper: {
+    '^@react-native-async-storage/async-storage$':
+      '<rootDir>/node_modules/@react-native-async-storage/async-storage/jest/async-storage-mock.js',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   transform: {

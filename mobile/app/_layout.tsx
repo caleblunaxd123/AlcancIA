@@ -15,6 +15,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider, useTheme } from '@/theme';
+import { useAppStore } from '@/store/appStore';
+import { useFinancialStore } from '@/store/financialStore';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -38,6 +40,9 @@ function RootNavigator() {
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen name="meta/[id]" />
+        <Stack.Screen name="meta/nueva" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="movimiento/nuevo" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="movimiento/[id]" />
       </Stack>
     </View>
   );
@@ -52,15 +57,19 @@ export default function RootLayout() {
     PlusJakartaSans_800ExtraBold,
   });
 
+  const appHydrated = useAppStore((s) => s.hydrated);
+  const finHydrated = useFinancialStore((s) => s.hydrated);
+  const ready = (fontsLoaded || fontError) && appHydrated && finHydrated;
+
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (ready) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded, fontError]);
+  }, [ready]);
 
   const onLayout = useCallback(() => {}, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!ready) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayout}>
