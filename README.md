@@ -48,8 +48,20 @@ compartidos con permisos, gamificación completa. Ver [docs/ROADMAP.md](docs/ROA
 ```
 AlcancIA/
   mobile/            App React Native (Expo + Expo Router + TypeScript strict)
+  backend/           API .NET 9 — IAiProvider + chat (Clean Architecture)
   docs/              Documentación de producto, diseño y arquitectura
 ```
+
+## Cómo ejecutar el backend (opcional, para chat con IA)
+
+```bash
+cd backend
+dotnet run --project AlcancIA.Api --urls http://localhost:5080
+```
+
+`GET /health` y `POST /api/ai/chat`. Sin API key de Gemini responde con el motor
+determinístico local. Para el emulador Android: `adb reverse tcp:5080 tcp:5080`.
+Detalles en [docs/AI.md](docs/AI.md). La app funciona igual **sin** el backend.
 
 ## Cómo ejecutar la app
 

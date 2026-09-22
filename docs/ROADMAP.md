@@ -29,13 +29,17 @@ Estado: ✅ hecho · 🚧 en progreso · ⬜ pendiente
 - ⬜ Simulador "¿Qué pasaría si…?" completo (mudanza, préstamo, bebé…)
 - ⬜ Timeline del dinero (7d–12m)
 
-## Fase 5 — IA ⬜
-- ⬜ Backend `IAiProvider` (Gemini Flash, sin hardcodear modelo)
-- ⬜ `FinancialContextBuilder` (contexto mínimo, nunca toda la BD)
-- ⬜ Chat contextual con respuestas ricas
+## Fase 5 — IA 🚧
+- ✅ Backend .NET 9 (Domain/Application/Infrastructure/Api/Tests) con `IAiProvider`
+- ✅ `GeminiAiProvider` (modelo desde config, nunca hardcodeado) + `LocalAiProvider`
+- ✅ `FinancialContextBuilder` (contexto mínimo, nunca toda la BD)
+- ✅ Contrato JSON validado + fallback determinístico (§68/§69)
+- ✅ Prompt-injection safe (§67) — datos delimitados, sanitizados, con tests
+- ✅ `POST /api/ai/chat` + `/health`, rate limiting, OpenAPI, CORS; 29 tests
+- ✅ App conectada: tab AlcancIA llama al backend con fallback on-device
+- ⬜ Gemini en vivo con API key real (hoy corre determinístico sin key)
 - ⬜ Extracción de comprobantes (Yape/Plin/boletas) con confirmación
-- ⬜ Insights generados
-- 🚧 Asistente UI con respuestas ya calculadas por el motor real
+- ⬜ Insights generados por IA + persistencia (EF Core / conversaciones)
 
 ## Fase 6 — Familia ⬜
 - 🚧 Vista de hogar (preview)
