@@ -4,3 +4,7 @@ export * from './weather';
 export * from './goals';
 export * from './purchase';
 export * from './insights';
+export * from './debts';
+export * from './subscriptions';
+export * from './recurrence';
+export * from './calendar';

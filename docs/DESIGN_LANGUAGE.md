@@ -61,9 +61,29 @@ Galería viva: ruta `/dev/design-system` en la app.
 ## Mascota
 
 Alcancía rosa, moderna, tierna sin ser infantil, con badge **IA**. Implementada como
-SVG themeable (`AlcanciaMascot`) con 6 moods (`neutral`, `happy`, `thinking`,
-`celebrating`, `warning`, `sleeping`) y micro-animaciones sutiles (breathing,
-floating). Preparada para reemplazarse por assets 3D/Rive detrás de la misma API.
+una fachada de componente (`AlcanciaMascot`) con 6 moods (`neutral`, `happy`,
+`thinking`, `celebrating`, `warning`, `sleeping`) y micro-animaciones sutiles
+(breathing, floating). Los estados principales consumen arte 3D propio desde
+`mobile/assets/branding/`; las pantallas nunca importan el archivo directamente,
+por lo que nuevos moods o Rive pueden incorporarse sin cambiar la API pública.
+
+## Ilustración de producto
+
+- `FinancialHouse` combina una escena 3D original con datos vivos de salud,
+  progreso y clima. La imagen aporta profundidad; el estado nunca se hornea en el
+  bitmap.
+- `GoalCover` tiene arte 3D original para los nueve tipos: vivienda, viaje, auto,
+  estudios, emergencia, boda, tecnología, mascota y personalizada. Todos usan un
+  drift cinematográfico sutil, entrada animada y una línea de luz vinculada al
+  progreso real. Reduced Motion elimina el movimiento ambiental.
+- `MissionCard` utiliza estados visuales propios de la mascota y progreso derivado
+  de movimientos/metas. Las misiones reclamadas se persisten y pasan a
+  “Completadas”.
+- El asistente combina quick prompts, conversación libre, respuestas financieras
+  enriquecidas y fallback determinístico local cuando el backend no está disponible.
+- Los assets finales viven en `mobile/assets/branding/`; las referencias de arte
+  se conservan solo en `docs/design-reference/` y no se usan como screenshots en
+  la interfaz.
 
 ## Accesibilidad
 

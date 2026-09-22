@@ -110,7 +110,7 @@ function CenterButton({ focused, onPress }: { focused: boolean; onPress: () => v
           style={{ marginTop: -22 }}
         >
           <LinearGradient
-            colors={[theme.colors.brand.primary, theme.colors.brand.secondary]}
+            colors={theme.scheme === 'light' ? [theme.colors.brand.accent, '#A78BFA'] : [theme.colors.brand.primary, theme.colors.brand.secondary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[

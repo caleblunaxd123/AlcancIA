@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Card } from '@/components/common/Card';
 import { Icon } from '@/components/common/Icon';
@@ -12,12 +12,13 @@ export type UpcomingPaymentProps = {
   amount: Money;
   whenLabel: string;
   icon?: string;
+  onPress?: () => void;
 };
 
-export function UpcomingPayment({ label, amount, whenLabel, icon = 'credit-card' }: UpcomingPaymentProps) {
+export function UpcomingPayment({ label, amount, whenLabel, icon = 'credit-card', onPress }: UpcomingPaymentProps) {
   const theme = useTheme();
-  return (
-    <Card>
+  const body = (
+    <Card variant={onPress ? 'interactive' : 'default'}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <View
           style={{
@@ -38,7 +39,15 @@ export function UpcomingPayment({ label, amount, whenLabel, icon = 'credit-card'
           </Text>
         </View>
         <Text variant="moneyMedium">{formatMoney(amount, { hideDecimalsWhenRound: true })}</Text>
+        {onPress ? <Icon name="chevron-right" size={18} color="muted" /> : null}
       </View>
     </Card>
+  );
+
+  if (!onPress) return body;
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel="Ver calendario financiero" onPress={onPress}>
+      {body}
+    </Pressable>
   );
 }

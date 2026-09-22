@@ -9,6 +9,7 @@ import { projectGoal } from '@/engine/goals';
 import { useTheme } from '@/theme';
 import type { Goal, GoalKind } from '@/types/domain';
 import { formatMonthYear } from '@/utils/date';
+import { GoalCover } from './GoalCover';
 
 const GOAL_ICON: Record<GoalKind, string> = {
   home: 'house',
@@ -34,7 +35,9 @@ export function GoalCard({ goal, onPress, compact = false }: GoalCardProps) {
   const pct = Math.round(projection.progress * 100);
 
   const body = (
-    <Card variant="goal">
+    <Card variant="goal" padded={false}>
+      {!compact ? <GoalCover kind={goal.kind} height={112} progress={projection.progress} /> : null}
+      <View style={{ padding: theme.spacing.xl }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
         <View
           style={{
@@ -75,6 +78,7 @@ export function GoalCard({ goal, onPress, compact = false }: GoalCardProps) {
           {onPress ? <Icon name="chevron-right" size={20} color="muted" /> : null}
         </View>
       ) : null}
+      </View>
     </Card>
   );
 

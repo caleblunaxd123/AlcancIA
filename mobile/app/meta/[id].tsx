@@ -8,6 +8,7 @@ import { AlcanciaMascot, type MascotMood } from '@/components/financial/Alcancia
 import { AnimatedProgress } from '@/components/financial/AnimatedProgress';
 import { MoneyCounter } from '@/components/financial/MoneyCounter';
 import { ScenarioSlider } from '@/components/financial/ScenarioSlider';
+import { GoalCover } from '@/components/financial/GoalCover';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Icon } from '@/components/common/Icon';
@@ -85,13 +86,19 @@ export default function GoalDetail() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false}>
-        <View style={{ alignItems: 'center', gap: theme.spacing.md }}>
-          <AlcanciaMascot mood={mood} size={100} />
-          <MoneyCounter value={toMajor(goal.saved)} variant="moneyLarge" color="primary" />
-          <Text variant="body" color="muted">
-            de {toMajor(goal.target).toLocaleString('es-PE', { style: 'currency', currency: 'PEN' })}
-          </Text>
-        </View>
+        <Card padded={false} variant="goal">
+          <GoalCover kind={goal.kind} height={184} progress={base.progress} />
+          <View style={{ padding: theme.spacing.xl, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <Text variant="label" color="muted">Ahorrado hasta hoy</Text>
+              <MoneyCounter value={toMajor(goal.saved)} variant="moneyLarge" color="primary" />
+              <Text variant="caption" color="muted">
+                de {toMajor(goal.target).toLocaleString('es-PE', { style: 'currency', currency: 'PEN' })}
+              </Text>
+            </View>
+            <AlcanciaMascot mood={mood} size={86} />
+          </View>
+        </Card>
 
         <Card variant="goal">
           <Text variant="label" color="muted" style={{ marginBottom: theme.spacing.sm }}>

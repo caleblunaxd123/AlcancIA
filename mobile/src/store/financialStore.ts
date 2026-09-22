@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { add } from '@/engine/money';
 import { emptySnapshot } from '@/engine/onboarding';
-import type { FinancialSnapshot, Goal, Transaction } from '@/types/domain';
+import type { Debt, FinancialSnapshot, Goal, Subscription, Transaction } from '@/types/domain';
 
 type FinancialState = {
   snapshot: FinancialSnapshot;
@@ -20,6 +20,13 @@ type FinancialState = {
   updateGoal: (id: string, patch: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
   contributeToGoal: (goalId: string, amountMinor: number) => void;
+
+  addDebt: (d: Debt) => void;
+  deleteDebt: (id: string) => void;
+  payDebt: (id: string, amountMinor: number) => void;
+
+  addSubscription: (s: Subscription) => void;
+  deleteSubscription: (id: string) => void;
 };
 
 export const useFinancialStore = create<FinancialState>()(
@@ -91,14 +98,49 @@ export const useFinancialStore = create<FinancialState>()(
             ),
           },
         })),
+
+      addDebt: (d) =>
+        set((state) => ({ snapshot: { ...state.snapshot, debts: [...state.snapshot.debts, d] } })),
+
+      deleteDebt: (id) =>
+        set((state) => ({
+          snapshot: { ...state.snapshot, debts: state.snapshot.debts.filter((d) => d.id !== id) },
+        })),
+
+      payDebt: (id, amountMinor) =>
+        set((state) => ({
+          snapshot: {
+            ...state.snapshot,
+            debts: state.snapshot.debts.map((d) =>
+              d.id === id
+                ? { ...d, balance: { ...d.balance, minor: Math.max(0, d.balance.minor - amountMinor) } }
+                : d,
+            ),
+            currentBalance: {
+              ...state.snapshot.currentBalance,
+              minor: state.snapshot.currentBalance.minor - amountMinor,
+            },
+          },
+        })),
+
+      addSubscription: (s) =>
+        set((state) => ({ snapshot: { ...state.snapshot, subscriptions: [...state.snapshot.subscriptions, s] } })),
+
+      deleteSubscription: (id) =>
+        set((state) => ({
+          snapshot: { ...state.snapshot, subscriptions: state.snapshot.subscriptions.filter((s) => s.id !== id) },
+        })),
     }),
     {
       name: 'alcancia-financial',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ snapshot: state.snapshot }),
-      onRehydrateStorage: () => (state) => {
-        if (state) state.hydrated = true;
-      },
     },
   ),
 );
+
+// Mutating state inside onRehydrateStorage would not notify subscribers, which
+// can leave the splash gate stuck; setState is the only way to re-render.
+useFinancialStore.persist.onFinishHydration(() => {
+  useFinancialStore.setState({ hydrated: true });
+});

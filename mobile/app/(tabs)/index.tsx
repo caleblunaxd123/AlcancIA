@@ -10,6 +10,8 @@ import { InsightCard } from '@/components/financial/InsightCard';
 import { SafeToSpendCard } from '@/components/financial/SafeToSpendCard';
 import { UpcomingPayment } from '@/components/financial/UpcomingPayment';
 import { FirstStepsCard } from '@/components/financial/FirstStepsCard';
+import { HomeCompanionCard } from '@/components/financial/HomeCompanionCard';
+import { MissionCard } from '@/components/financial/MissionCard';
 import { Screen } from '@/components/common/Screen';
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { Text } from '@/components/common/Text';
@@ -17,6 +19,9 @@ import { useHomeData } from '@/features/home/useHomeData';
 import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
 import { greeting } from '@/utils/greeting';
+import { useFinancialStore } from '@/store/financialStore';
+import { buildMissions } from '@/features/challenges/missions';
+import { sum } from '@/engine/money';
 
 const TOTAL_STEPS = 4;
 
@@ -29,6 +34,9 @@ export default function Home() {
   const stepsDismissed = useAppStore((s) => s.stepsDismissed);
   const showSteps = !stepsDismissed && completedSteps.length < TOTAL_STEPS;
   const displayName = name || 'ahí';
+  const snapshot = useFinancialStore((s) => s.snapshot);
+  const totalSaved = sum(snapshot.goals.map((goal) => goal.saved));
+  const featuredMission = buildMissions(snapshot)[1];
 
   let delay = 0;
   const nextDelay = () => {
@@ -52,8 +60,8 @@ export default function Home() {
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Tu perfil"
-              onPress={() => router.push('/(tabs)/familia')}
+              accessibilityLabel="Perfil y módulos"
+              onPress={() => router.push('/mas')}
               style={{
                 width: 44,
                 height: 44,
@@ -69,6 +77,10 @@ export default function Home() {
             </Pressable>
           </View>
           <FinancialWeather weather={weather} />
+        </Animated.View>
+
+        <Animated.View entering={nextDelay()}>
+          <HomeCompanionCard totalSaved={totalSaved} onPress={() => router.push('/(tabs)/ia')} />
         </Animated.View>
 
         {/* Safe to spend hero */}
@@ -97,12 +109,13 @@ export default function Home() {
         {/* Next payment */}
         {nextPayment ? (
           <Animated.View entering={nextDelay()}>
-            <SectionHeader title="Próximo movimiento" />
+            <SectionHeader title="Próximo movimiento" actionLabel="Calendario" onAction={() => router.push('/calendario')} />
             <UpcomingPayment
               label={nextPayment.label}
               amount={nextPayment.amount}
               whenLabel={nextPayment.whenLabel}
               icon={nextPayment.icon}
+              onPress={() => router.push('/calendario')}
             />
           </Animated.View>
         ) : null}
@@ -116,6 +129,13 @@ export default function Home() {
                 <GoalCard key={g.id} goal={g} onPress={() => router.push(`/meta/${g.id}`)} />
               ))}
             </View>
+          </Animated.View>
+        ) : null}
+
+        {featuredMission ? (
+          <Animated.View entering={nextDelay()}>
+            <SectionHeader title="Tu misión" actionLabel="Ver misiones" onAction={() => router.push('/retos')} />
+            <MissionCard mission={featuredMission} compact onPress={() => router.push('/retos')} />
           </Animated.View>
         ) : null}
 

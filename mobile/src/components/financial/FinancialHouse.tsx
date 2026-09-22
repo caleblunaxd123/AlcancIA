@@ -1,5 +1,6 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { ImageBackground, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,138 +9,131 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
+import { Icon } from '@/components/common/Icon';
+import { Text } from '@/components/common/Text';
 import { useTheme } from '@/theme';
 import type { WeatherState } from '@/types/domain';
 
+const financialHouseDark = require('../../../assets/branding/financial-house.png');
+const financialHouseLight = require('../../../assets/branding/financial-house-light.png');
+
 export type FinancialHouseProps = {
-  /** 0..1 overall health (drives window warmth + decor). */
+  /** 0..1 overall health. */
   health: number;
-  /** 0..1 savings progress (drives plant growth). */
+  /** 0..1 savings progress. */
   savingsProgress: number;
   weather: WeatherState;
   width?: number;
 };
 
-const SKY: Record<WeatherState, [string, string]> = {
-  calm: ['#2A3E68', '#1A2A4A'],
-  stable: ['#243759', '#152740'],
-  tight: ['#2A3450', '#141E33'],
-  attention: ['#2C3346', '#151B2B'],
-  stormy: ['#2E3140', '#161A26'],
+const STATUS: Record<WeatherState, { label: string; icon: string }> = {
+  calm: { label: 'Próspero', icon: 'sparkles' },
+  stable: { label: 'Estable', icon: 'sun' },
+  tight: { label: 'Ajustado', icon: 'cloud-sun' },
+  attention: { label: 'Atención', icon: 'cloud' },
+  stormy: { label: 'Protegiendo', icon: 'cloud-rain' },
 };
 
 /**
- * A small, warm home scene (§13). It never looks "destroyed" when finances are
- * tight — instead it grows lighter, greener, and more decorated as things
- * improve. Encouraging, never shaming.
+ * Living financial-home diorama. The scene is art, while status, growth and
+ * accessibility remain driven by the real financial engine.
  */
 export function FinancialHouse({ health, savingsProgress, weather, width = 320 }: FinancialHouseProps) {
   const theme = useTheme();
-  const height = width * 0.62;
-  const sway = useSharedValue(0);
-  const windowGlow = Math.max(0.25, Math.min(1, health));
-  const plantScale = 0.5 + Math.max(0, Math.min(1, savingsProgress)) * 0.6;
+  const pulse = useSharedValue(1);
+  const normalizedHealth = Math.max(0, Math.min(1, health));
+  const normalizedSavings = Math.max(0, Math.min(1, savingsProgress));
+  const height = width * 0.64;
+  const status = STATUS[weather];
+  const isLight = theme.scheme === 'light';
+  const primaryOverlayText = isLight ? theme.colors.text.primary : '#FFFFFF';
+  const secondaryOverlayText = isLight ? theme.colors.text.secondary : 'rgba(255,255,255,0.72)';
 
   useEffect(() => {
     if (theme.reducedMotion) return;
-    sway.value = withRepeat(
+    pulse.value = withRepeat(
       withSequence(
-        withTiming(1.5, { duration: 2200, easing: Easing.inOut(Easing.quad) }),
-        withTiming(-1.5, { duration: 2200, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1.08, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
       ),
       -1,
-      true,
+      false,
     );
-  }, [sway, theme.reducedMotion]);
+  }, [pulse, theme.reducedMotion]);
 
-  const plantStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${sway.value}deg` }],
-  }));
-
-  const sky = SKY[weather];
-  const showStars = weather === 'calm' || weather === 'stable';
+  const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   return (
-    <View style={{ width, height, borderRadius: theme.radius.xl, overflow: 'hidden' }} accessibilityLabel="Tu casa financiera">
-      <Svg width={width} height={height} viewBox="0 0 320 200">
-        <Defs>
-          <LinearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor={sky[0]} />
-            <Stop offset="100%" stopColor={sky[1]} />
-          </LinearGradient>
-          <LinearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#1D3A2E" />
-            <Stop offset="100%" stopColor="#152B22" />
-          </LinearGradient>
-          <LinearGradient id="win" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#FFE3A6" stopOpacity={windowGlow} />
-            <Stop offset="100%" stopColor="#F5B94F" stopOpacity={windowGlow} />
-          </LinearGradient>
-        </Defs>
+    <ImageBackground
+      source={isLight ? financialHouseLight : financialHouseDark}
+      resizeMode="cover"
+      accessibilityRole="image"
+      accessibilityLabel={`Tu casa financiera está ${status.label.toLowerCase()}; ahorro al ${Math.round(normalizedSavings * 100)} por ciento`}
+      style={{ width, height, borderRadius: theme.radius.xl, overflow: 'hidden' }}
+      imageStyle={{ borderRadius: theme.radius.xl }}
+    >
+      <LinearGradient
+        colors={isLight ? ['rgba(255,255,255,0.82)', 'transparent', 'rgba(255,255,255,0.90)'] : ['rgba(5,15,29,0.82)', 'transparent', 'rgba(5,15,29,0.78)']}
+        locations={[0, 0.52, 1]}
+        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+      />
 
-        {/* Sky */}
-        <Rect x="0" y="0" width="320" height="200" fill="url(#sky)" />
+      <View style={{ flex: 1, padding: theme.spacing.lg, justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View>
+            <Text variant="label" style={{ color: primaryOverlayText }}>Tu hogar</Text>
+            <Text variant="caption" style={{ color: secondaryOverlayText }}>
+              Todo sigue en equilibrio
+            </Text>
+          </View>
+          <Animated.View
+            style={[
+              {
+                minHeight: 36,
+                paddingHorizontal: theme.spacing.md,
+                borderRadius: theme.radius.pill,
+                backgroundColor: isLight ? 'rgba(255,255,255,0.88)' : 'rgba(5,15,29,0.62)',
+                borderWidth: 1,
+                borderColor: isLight ? theme.colors.border.subtle : 'rgba(255,255,255,0.18)',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: theme.spacing.xs,
+              },
+              pulseStyle,
+            ]}
+          >
+            <Icon name={status.icon} size={15} rawColor={theme.colors.money.positive} />
+            <Text variant="caption" style={{ color: primaryOverlayText }}>{status.label}</Text>
+          </Animated.View>
+        </View>
 
-        {/* Stars / moon on good weather */}
-        {showStars ? (
-          <G>
-            <Circle cx="250" cy="36" r="14" fill="#F5F0E0" opacity={0.9} />
-            <Circle cx="244" cy="32" r="12" fill={sky[0]} />
-            <Circle cx="60" cy="30" r="1.6" fill="#FFFFFF" opacity={0.9} />
-            <Circle cx="95" cy="50" r="1.4" fill="#FFFFFF" opacity={0.7} />
-            <Circle cx="150" cy="26" r="1.6" fill="#FFFFFF" opacity={0.8} />
-            <Circle cx="200" cy="60" r="1.2" fill="#FFFFFF" opacity={0.6} />
-          </G>
-        ) : (
-          <G opacity={0.5}>
-            <Path d="M40 46 q14 -10 28 0 q14 -8 26 2 q6 8 -4 12 l-52 0 q-8 -6 2 -14 Z" fill="#3A4258" />
-            <Path d="M210 40 q12 -8 24 0 q12 -6 22 2 q6 7 -4 11 l-46 0 q-6 -6 4 -13 Z" fill="#343B50" />
-          </G>
-        )}
-
-        {/* Ground */}
-        <Rect x="0" y="150" width="320" height="50" fill="url(#ground)" />
-
-        {/* House body */}
-        <G>
-          <Rect x="104" y="96" width="112" height="66" rx="6" fill={theme.colors.surface.secondary} />
-          {/* Roof */}
-          <Path d="M96 100 L160 58 L224 100 Z" fill={theme.colors.brand.primary} />
-          {/* Door */}
-          <Rect x="150" y="122" width="24" height="40" rx="5" fill={theme.colors.brand.secondary} />
-          <Circle cx="169" cy="142" r="2" fill={theme.colors.text.onBrand} />
-          {/* Windows */}
-          <Rect x="116" y="112" width="24" height="24" rx="4" fill="url(#win)" />
-          <Rect x="186" y="112" width="24" height="24" rx="4" fill="url(#win)" />
-        </G>
-
-        {/* Chimney smoke when healthy */}
-        {health > 0.5 ? (
-          <G opacity={0.5}>
-            <Circle cx="200" cy="70" r="4" fill="#FFFFFF" />
-            <Circle cx="205" cy="60" r="5" fill="#FFFFFF" />
-            <Circle cx="212" cy="52" r="6" fill="#FFFFFF" />
-          </G>
-        ) : null}
-      </Svg>
-
-      {/* Growing savings plant (animated sway) */}
-      <Animated.View
-        style={[
-          { position: 'absolute', left: width * 0.2, bottom: height * 0.18 },
-          plantStyle,
-          { transform: [{ scale: plantScale }] },
-        ]}
-      >
-        <Svg width={46} height={70} viewBox="0 0 46 70">
-          <Path d="M23 70 L23 34" stroke="#2E8B5B" strokeWidth={4} strokeLinecap="round" />
-          <Path d="M23 44 q-16 -6 -18 -22 q16 2 18 18 Z" fill="#42E0B5" />
-          <Path d="M23 38 q16 -8 20 -24 q-18 0 -20 20 Z" fill="#2EC9A6" />
-          <Circle cx="23" cy="20" r="7" fill="#6BEAC8" />
-        </Svg>
-      </Animated.View>
-    </View>
+        <View
+          style={{
+            alignSelf: 'stretch',
+            padding: theme.spacing.md,
+            borderRadius: theme.radius.lg,
+            backgroundColor: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(5,15,29,0.68)',
+            borderWidth: 1,
+            borderColor: isLight ? theme.colors.border.subtle : 'rgba(255,255,255,0.14)',
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
+            <Text variant="caption" style={{ color: secondaryOverlayText }}>Crecimiento de tu hogar</Text>
+            <Text variant="bodyStrong" style={{ color: primaryOverlayText }}>{Math.round(normalizedHealth * 100)}%</Text>
+          </View>
+          <View style={{ height: 6, borderRadius: 3, backgroundColor: isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)', overflow: 'hidden' }}>
+            <View
+              style={{
+                height: '100%',
+                width: `${Math.max(6, normalizedSavings * 100)}%`,
+                borderRadius: 3,
+                backgroundColor: theme.colors.money.positive,
+              }}
+            />
+          </View>
+        </View>
+      </View>
+    </ImageBackground>
   );
 }

@@ -26,8 +26,11 @@ export function addDays(d: Date, days: number): Date {
 }
 
 export function daysBetween(from: Date, to: Date): number {
-  const ms = to.setHours(0, 0, 0, 0) - new Date(from).setHours(0, 0, 0, 0);
-  return Math.round(ms / (1000 * 60 * 60 * 24));
+  const a = new Date(from);
+  a.setHours(0, 0, 0, 0);
+  const b = new Date(to);
+  b.setHours(0, 0, 0, 0);
+  return Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 const MONTHS_ES = [

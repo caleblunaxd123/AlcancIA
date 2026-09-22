@@ -5,13 +5,22 @@
 import { CURRENCY_META, type CurrencyCode, type Money } from '@/types/money';
 
 export function money(minor: number, currency: CurrencyCode = 'PEN'): Money {
+  if (!Number.isFinite(minor) || !Number.isSafeInteger(Math.round(minor))) {
+    throw new Error('Money amount must be a finite safe integer');
+  }
   return { minor: Math.round(minor), currency };
 }
 
 /** Build Money from a major-unit value (e.g. 742.5 -> 74250 minor). */
 export function fromMajor(major: number, currency: CurrencyCode = 'PEN'): Money {
+  if (!Number.isFinite(major)) throw new Error('Money amount must be finite');
   const { decimals } = CURRENCY_META[currency];
   return { minor: Math.round(major * 10 ** decimals), currency };
+}
+
+export function isValidMoney(value: Money, options: { positive?: boolean } = {}): boolean {
+  const valid = Number.isSafeInteger(value.minor) && Number.isFinite(value.minor);
+  return valid && (!options.positive || value.minor > 0);
 }
 
 export function toMajor(m: Money): number {

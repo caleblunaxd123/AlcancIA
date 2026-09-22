@@ -60,7 +60,9 @@ export function Card({ variant = 'default', padded = true, style, children, ...r
       style={[
         base,
         variantBorder[variant] ? { borderColor: variantBorder[variant] } : null,
-        theme.elevation.sm,
+        theme.scheme === 'light'
+          ? { shadowColor: '#163D2C', shadowOpacity: 0.07, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 2 }
+          : theme.elevation.sm,
         style,
       ]}
       {...rest}

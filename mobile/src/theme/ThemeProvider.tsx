@@ -10,13 +10,15 @@ import {
   useColorScheme as useSystemColorScheme,
 } from 'react-native';
 
+import { useAppStore, type ThemePreference } from '@/store/appStore';
+
 import { motion, spring, timing, easing, STAGGER_STEP } from './motion';
 import { elevation, radius, spacing, MIN_TOUCH_TARGET } from './spacing';
 import { darkColors, lightColors, type ColorTokens } from './tokens';
 import { fontFamily, typography } from './typography';
 
 export type ColorScheme = 'light' | 'dark';
-export type ThemePreference = ColorScheme | 'system';
+export type { ThemePreference };
 
 export type Theme = {
   scheme: ColorScheme;
@@ -64,7 +66,8 @@ function buildTheme(scheme: ColorScheme, reducedMotion: boolean): Theme {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useSystemColorScheme();
-  const [preference, setPreference] = useState<ThemePreference>('dark');
+  const preference = useAppStore((s) => s.themePreference);
+  const setPreference = useAppStore((s) => s.setThemePreference);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -91,7 +94,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       preference,
       setPreference,
     }),
-    [scheme, reducedMotion, preference],
+    [scheme, reducedMotion, preference, setPreference],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

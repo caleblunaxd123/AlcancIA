@@ -57,7 +57,10 @@ export function buildChatContext(snapshot: FinancialSnapshot) {
     categoryTotals.set(t.category, (categoryTotals.get(t.category) ?? 0) + t.amount.minor);
   }
   const categorySummary = [...categoryTotals.entries()]
-    .map(([id, minor]) => ({ category: CATEGORIES[id as keyof typeof CATEGORIES]?.label ?? id, amount: minor / 100 }))
+    .map(([id, minor]) => ({
+      category: CATEGORIES[id as keyof typeof CATEGORIES]?.label ?? id,
+      amount: toMajor({ minor, currency }),
+    }))
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 6);
 
@@ -71,7 +74,7 @@ export function buildChatContext(snapshot: FinancialSnapshot) {
   return {
     currency,
     safeToSpend: toMajor(sts.amount),
-    monthlyIncome: Math.round((monthlyIncome / 100) * 100) / 100,
+    monthlyIncome: Math.round(toMajor({ minor: Math.round(monthlyIncome), currency }) * 100) / 100,
     upcomingBills,
     goals,
     categorySummary,

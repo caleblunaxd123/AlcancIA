@@ -67,3 +67,55 @@ describe('financialStore CRUD', () => {
     expect(goal!.saved.minor).toBe(25000); // 100 + 150
   });
 });
+
+describe('financialStore debts', () => {
+  const debt = {
+    id: 'd1',
+    name: 'Tarjeta',
+    kind: 'card' as const,
+    balance: fromMajor(2400),
+    minimumPayment: fromMajor(300),
+    annualRate: 0.55,
+    dueDay: 15,
+  };
+
+  it('adds and deletes debts', () => {
+    useFinancialStore.getState().addDebt(debt);
+    expect(useFinancialStore.getState().snapshot.debts).toHaveLength(1);
+    useFinancialStore.getState().deleteDebt('d1');
+    expect(useFinancialStore.getState().snapshot.debts).toHaveLength(0);
+  });
+
+  it('paying a debt lowers both the debt balance and the current balance', () => {
+    useFinancialStore.getState().addDebt(debt);
+    const before = useFinancialStore.getState().snapshot.currentBalance.minor;
+    useFinancialStore.getState().payDebt('d1', fromMajor(500).minor);
+    const s = useFinancialStore.getState().snapshot;
+    expect(s.debts[0]!.balance.minor).toBe(fromMajor(1900).minor);
+    expect(s.currentBalance.minor).toBe(before - fromMajor(500).minor);
+  });
+
+  it('never lets a debt balance go negative', () => {
+    useFinancialStore.getState().addDebt(debt);
+    useFinancialStore.getState().payDebt('d1', fromMajor(5000).minor);
+    expect(useFinancialStore.getState().snapshot.debts[0]!.balance.minor).toBe(0);
+  });
+});
+
+describe('financialStore subscriptions', () => {
+  const sub = {
+    id: 's1',
+    name: 'Netflix',
+    amount: fromMajor(44.9),
+    frequency: 'monthly' as const,
+    category: 'subscriptions' as const,
+    renewalDay: 15,
+  };
+
+  it('adds and deletes subscriptions', () => {
+    useFinancialStore.getState().addSubscription(sub);
+    expect(useFinancialStore.getState().snapshot.subscriptions).toHaveLength(1);
+    useFinancialStore.getState().deleteSubscription('s1');
+    expect(useFinancialStore.getState().snapshot.subscriptions).toHaveLength(0);
+  });
+});

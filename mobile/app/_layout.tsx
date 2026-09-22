@@ -15,6 +15,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider, useTheme } from '@/theme';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useAppStore } from '@/store/appStore';
 import { useFinancialStore } from '@/store/financialStore';
 
@@ -43,6 +44,13 @@ function RootNavigator() {
         <Stack.Screen name="meta/nueva" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="movimiento/nuevo" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="movimiento/[id]" />
+        <Stack.Screen name="mas" />
+        <Stack.Screen name="suscripciones/index" />
+        <Stack.Screen name="suscripciones/nueva" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="deudas/index" />
+        <Stack.Screen name="deudas/nueva" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="deudas/[id]" />
+        <Stack.Screen name="calendario" />
       </Stack>
     </View>
   );
@@ -75,7 +83,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayout}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <RootNavigator />
+          <ErrorBoundary>
+            <RootNavigator />
+          </ErrorBoundary>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

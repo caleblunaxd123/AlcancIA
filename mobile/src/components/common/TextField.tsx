@@ -8,9 +8,11 @@ export type TextFieldProps = TextInputProps & {
   label?: string;
   /** Prefix shown inside the field, e.g. "S/". */
   prefix?: string;
+  /** Suffix shown inside the field, e.g. "%". */
+  suffix?: string;
 };
 
-export function TextField({ label, prefix, style, ...rest }: TextFieldProps) {
+export function TextField({ label, prefix, suffix, style, ...rest }: TextFieldProps) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
 
@@ -55,6 +57,11 @@ export function TextField({ label, prefix, style, ...rest }: TextFieldProps) {
           ]}
           {...rest}
         />
+        {suffix ? (
+          <Text variant="subtitle" color="secondary">
+            {suffix}
+          </Text>
+        ) : null}
       </View>
     </View>
   );

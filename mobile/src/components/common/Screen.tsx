@@ -12,8 +12,7 @@ export type ScreenProps = {
 };
 
 /**
- * Base screen surface — the ambient "money night" background with a soft brand
- * glow at the top, matching the reference splash/home atmosphere.
+ * Base screen surface with a theme-aware ambient glow.
  */
 export function Screen({ children, edges = { top: true, bottom: false } }: ScreenProps) {
   const theme = useTheme();
@@ -23,11 +22,12 @@ export function Screen({ children, edges = { top: true, bottom: false } }: Scree
     <View style={[styles.root, { backgroundColor: theme.colors.background.primary }]}>
       <LinearGradient
         colors={[
-          theme.scheme === 'dark' ? 'rgba(147,112,255,0.16)' : 'rgba(109,77,242,0.06)',
+          theme.scheme === 'dark' ? 'rgba(147,112,255,0.16)' : 'rgba(59,130,246,0.10)',
+          theme.scheme === 'dark' ? 'transparent' : 'rgba(34,197,94,0.04)',
           'transparent',
         ]}
         start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.9, y: 0.5 }}
+        end={{ x: 0.9, y: 0.72 }}
         style={styles.glow}
         pointerEvents="none"
       />

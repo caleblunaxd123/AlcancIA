@@ -42,6 +42,10 @@ export type Transaction = {
   date: string;
   certainty: Certainty;
   source?: 'manual' | 'text' | 'voice' | 'receipt' | 'yape' | 'plin' | 'recurring';
+  /** System operation that produced the movement. Used to reverse it safely. */
+  operation?: 'manual' | 'goal-contribution' | 'debt-payment';
+  /** Entity affected by a system operation. */
+  linkedEntityId?: string;
 };
 
 export type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly';
@@ -55,6 +59,8 @@ export type RecurringTransaction = {
   frequency: Frequency;
   /** Day of month (1-31) for monthly, or ISO date anchor. */
   dayOfMonth?: number;
+  /** Concrete occurrence used as the recurrence anchor. */
+  nextDate?: string;
   essential: boolean;
 };
 
@@ -108,6 +114,8 @@ export type Subscription = {
   frequency: Frequency;
   category: CategoryId;
   renewalDay: number;
+  /** Concrete next renewal. Required to model weekly and yearly plans correctly. */
+  nextRenewalDate?: string;
 };
 
 export type WeatherState = 'calm' | 'stable' | 'tight' | 'attention' | 'stormy';
