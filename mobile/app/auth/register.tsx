@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -78,7 +78,13 @@ export default function Register() {
         <TextField label="Confirmar contraseña" value={confirm} onChangeText={setConfirm} secureTextEntry={!visible} autoCapitalize="none" autoComplete="new-password" error={confirm && confirm !== password ? 'Las contraseñas no coinciden.' : undefined} />
         <Pressable onPress={() => setAccepted((value) => !value)} accessibilityRole="checkbox" accessibilityState={{ checked: accepted }} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.md, minHeight: 44 }}>
           <View style={{ width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: accepted ? theme.colors.brand.primary : theme.colors.border.strong, backgroundColor: accepted ? theme.colors.brand.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>{accepted ? <Icon name="check" size={16} color="onBrand" /> : null}</View>
-          <Text variant="caption" color="secondary" style={{ flex: 1 }}>Acepto que AlcancIA guarde mi cuenta y mis datos financieros cifrados en su servidor para respaldarlos y usarlos en mis dispositivos.</Text>
+          <Text variant="caption" color="secondary" style={{ flex: 1 }}>
+            Acepto los{' '}
+            <Text variant="caption" color="brand" onPress={() => router.push('/legal/terminos' as Href)} accessibilityRole="link">Términos de uso</Text>
+            {' '}y la{' '}
+            <Text variant="caption" color="brand" onPress={() => router.push('/legal/privacidad' as Href)} accessibilityRole="link">Política de privacidad</Text>
+            . AlcancIA guarda mi cuenta y mis datos cifrados para respaldarlos y usarlos en mis dispositivos.
+          </Text>
         </Pressable>
         {error ? <Text variant="caption" color="negative" accessibilityLiveRegion="polite">{error}</Text> : null}
         {!canSubmit ? <Text variant="caption" color="secondary">Completa los campos, confirma tu contraseña y marca la casilla para crear tu cuenta.</Text> : null}

@@ -6,7 +6,7 @@ _Actualizado: 2026-09-23._
 
 1. **Cuentas y datos en la nube: primera etapa.** Hay cuentas en servidor (PostgreSQL, EF Core), sesiones JWT de 15 min + refresh rotativo con detección de reuso, y sincronización offline-first de un documento cifrado por usuario (`GET/PUT /api/sync`, versión optimista, "gana la edición más reciente"). Límites actuales:
    - La resolución de conflictos es por documento completo, no por movimiento: si dos celulares editan casi a la vez, la edición más antigua se reemplaza (el usuario recibe aviso). Siguiente paso: tablas normalizadas o merge por entidad.
-   - No hay cambio de correo, borrado de cuenta ni exportación desde el servidor (§21).
+   - Borrar cuenta (con código por correo) y descargar datos ya existen. Falta cambiar el correo de una cuenta.
    - Las cuentas creadas antes de la nube siguen funcionando solo en su celular hasta que el usuario las activa (login → código por correo).
    - Los códigos por correo pendientes viven en memoria de una instancia (reiniciar la API invalida códigos aún no verificados). Los tickets y el cifrado usan Data Protection con llaves en la base, así que sirven entre instancias.
 1b. **Login con Google requiere credenciales del dueño y dev build.** El servidor verifica el token con Google (`tokeninfo`: audiencia = nuestros client IDs, correo verificado). En Android el Client ID exige package `com.alcancia.app` + SHA-1 (dev build, no Expo Go). Facebook no tiene verificación en servidor todavía: el botón avisa "Pronto".
@@ -25,9 +25,9 @@ _Actualizado: 2026-09-23._
 
 ## P3 — Nice-to-have
 
-9. Ruta interna `app/dev/design-system.tsx` visible en el bundle; excluirla de builds de producción cuando se configure EAS.
+9. Ruta interna `app/dev/design-system.tsx`: redirige al inicio en builds de release (su código sigue en el bundle, sin acceso).
 10. `docs/design-reference/branding-source/` (35 MB de PNGs fuente) vive en el repo; considerar Git LFS o un archive externo si el tamaño molesta.
-11. Exportación/eliminación de cuenta (§21): hoy "cerrar sesión" y reset local existen en Ajustes; exportar datos (JSON) y borrado definitivo llegarán con el backend.
+11. ~~Exportación/eliminación de cuenta (§21)~~: resuelto en Mi cuenta → Privacidad y datos.
 
 ## Supuestos deliberados
 

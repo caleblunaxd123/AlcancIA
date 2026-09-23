@@ -16,6 +16,13 @@ type Provider = 'google' | 'facebook';
 
 const FACEBOOK_BLUE = '#1877F2'; // Meta brand guideline color
 
+/**
+ * Facebook stays hidden until the server can verify its tokens (like Google).
+ * Flip to true together with a /api/auth/facebook endpoint.
+ */
+const FACEBOOK_ENABLED = false;
+const facebookAvailable = () => FACEBOOK_ENABLED && isFacebookConfigured();
+
 function GoogleLogo({ size = 20 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 48 48" accessibilityElementsHidden>
@@ -185,7 +192,7 @@ export function SocialAuthButtons({
 }) {
   const theme = useTheme();
   const [busy, setBusy] = useState<Provider | null>(null);
-  if (!isGoogleConfigured() && !isFacebookConfigured()) return null;
+  if (!isGoogleConfigured() && !facebookAvailable()) return null;
 
   const divider = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
@@ -202,7 +209,7 @@ export function SocialAuthButtons({
         {isGoogleConfigured() ? (
           <GoogleButton onGoogleToken={onGoogleToken} onError={onError} busy={busy === 'google'} setBusy={(b) => setBusy(b ? 'google' : null)} />
         ) : null}
-        {isFacebookConfigured() ? (
+        {facebookAvailable() ? (
           <FacebookButton onGoogleToken={onGoogleToken} onError={onError} busy={busy === 'facebook'} setBusy={(b) => setBusy(b ? 'facebook' : null)} />
         ) : null}
       </View>

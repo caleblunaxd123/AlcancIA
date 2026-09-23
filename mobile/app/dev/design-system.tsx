@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 
 import { AlcanciaMascot, type MascotMood } from '@/components/financial/AlcanciaMascot';
@@ -16,7 +16,13 @@ import { useTheme, useThemePreference } from '@/theme';
 
 const MOODS: MascotMood[] = ['neutral', 'happy', 'thinking', 'celebrating', 'warning', 'sleeping'];
 
-export default function DesignSystem() {
+/** Internal gallery: only reachable in development builds. */
+export default function DesignSystemRoute() {
+  if (!__DEV__) return <Redirect href="/" />;
+  return <DesignSystem />;
+}
+
+function DesignSystem() {
   const theme = useTheme();
   const router = useRouter();
   const { scheme, setPreference } = useThemePreference();

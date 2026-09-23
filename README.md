@@ -92,6 +92,9 @@ Tests: `dotnet test` usa SQLite en memoria; con
 `ALCANCIA_TEST_PG="Host=127.0.0.1;Port=5440;Username=alcancia;Password=alcancia_local_dev"`
 corre todo contra PostgreSQL real, incluidas las pruebas de concurrencia.
 
+Para publicar (hosting, variables, EAS, tiendas): [docs/DEPLOY.md](docs/DEPLOY.md) y
+[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md).
+
 ## Cómo ejecutar la app
 
 Requisitos: Node 20+, y la app **Expo Go** en tu teléfono (o un emulador).

@@ -11,7 +11,8 @@ import { Icon } from './Icon';
 import { Text } from './Text';
 import { useTheme } from '@/theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'positive';
+/** `danger`: outlined, for destructive actions (never the default choice). */
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'positive' | 'danger';
 type ButtonSize = 'md' | 'lg';
 
 export type ButtonProps = {
@@ -70,7 +71,9 @@ export function Button({
         ? 'onAccent'
         : variant === 'ghost'
           ? 'brand'
-          : 'primary';
+          : variant === 'danger'
+            ? 'negative'
+            : 'primary';
 
   const containerStyle: ViewStyle = {
     height,
@@ -88,14 +91,14 @@ export function Button({
   const solidBg =
     variant === 'secondary'
       ? theme.colors.surface.interactive
-      : variant === 'ghost'
+      : variant === 'ghost' || variant === 'danger'
         ? 'transparent'
         : undefined;
 
   const content = (
     <>
       {loading ? (
-        <ActivityIndicator color={theme.colors.text.onBrand} />
+        <ActivityIndicator color={variant === 'danger' ? theme.colors.money.negative : theme.colors.text.onBrand} />
       ) : (
         <>
           {icon && iconPosition === 'left' ? (
@@ -139,7 +142,7 @@ export function Button({
           {content}
         </LinearGradient>
       ) : (
-        <View style={[containerStyle, { backgroundColor: solidBg }]}>{content}</View>
+        <View style={[containerStyle, { backgroundColor: solidBg }, variant === 'danger' ? { borderWidth: 1.5, borderColor: theme.colors.money.negative } : null]}>{content}</View>
       )}
     </AnimatedPressable>
   );

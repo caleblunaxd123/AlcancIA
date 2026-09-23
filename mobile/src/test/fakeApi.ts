@@ -122,6 +122,13 @@ export function installFakeApi(): FakeApi {
       user!.stamp += 1;
       return json(200, issue(user!));
     }
+    if (method === 'DELETE' && path === '/api/auth/me') {
+      if (!api.tickets.delete(`delete|${user!.email}`) || body.ticket !== 'ticket-ok') return json(400, { error: 'Confirma con el código que te enviamos por correo.' });
+      api.users = api.users.filter((u) => u.id !== user!.id);
+      api.docs.delete(user!.id);
+      sessions.forEach((s) => { if (s.userId === user!.id) s.revoked = true; });
+      return json(204);
+    }
     if (method === 'GET' && path === '/api/sync') {
       const doc = api.docs.get(user!.id);
       return doc ? json(200, doc) : json(204);

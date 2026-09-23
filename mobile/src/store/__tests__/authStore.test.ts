@@ -82,6 +82,33 @@ describe('authStore (cloud accounts)', () => {
   });
 });
 
+describe('account deletion', () => {
+  beforeEach(async () => {
+    api = installFakeApi();
+    __resetApiClientForTests();
+    useAuthStore.setState({ account: null, authenticated: false });
+  });
+  afterEach(() => api.restore());
+
+  it('needs the email ticket, then erases the cloud account and the session', async () => {
+    await registerAna();
+    expect((await useAuthStore.getState().deleteAccount('inventado')).ok).toBe(false);
+    expect(api.users).toHaveLength(1);
+
+    api.tickets.add('delete|ana@mail.com');
+    expect(await useAuthStore.getState().deleteAccount('ticket-ok')).toEqual({ ok: true });
+    expect(api.users).toHaveLength(0);
+    expect(useAuthStore.getState().account).toBeNull();
+    expect(await hasSession()).toBe(false);
+  });
+
+  it('a device-only account is deleted locally without a code', async () => {
+    useAuthStore.setState({ account: { id: 'x', name: 'Leo', email: 'leo@mail.com', createdAt: '2026-01-01', passwordHash: 'h', passwordSalt: 's' }, authenticated: true });
+    expect(await useAuthStore.getState().deleteAccount()).toEqual({ ok: true });
+    expect(useAuthStore.getState().account).toBeNull();
+  });
+});
+
 describe('authStore (accounts created before the cloud)', () => {
   const legacy = {
     id: 'user-local',

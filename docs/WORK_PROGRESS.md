@@ -77,6 +77,12 @@ Decisiones del usuario: PostgreSQL en Docker · datos cifrados en servidor · of
 - App: `services/apiClient.ts` (refresh single-flight, offline distinto de rechazado), `authStore` v2 (servidor; cuentas legacy se activan con código), `services/sync.ts` + `syncStore` (ownerId por usuario, push 2.5 s tras editar, pull al iniciar/volver, gana la edición más reciente con aviso), `useSyncEngine`, `SyncStatusLine` en Mi cuenta. Registro sin palabra de recuperación (se recupera por correo). Tests con servidor falso (`src/test/fakeApi.ts`): 171 verdes.
 - Verificado en emulador: la cuenta creada antes abre igual tras la actualización y Mi cuenta muestra "Solo en este celular". Pendiente (requiere contraseña + código del usuario): activarla en la nube y ver "Respaldado en la nube".
 
+### Listo para producción (2026-09-23)
+- Backend: borrar cuenta con código (`DELETE /api/auth/me`, cascada) y exportar datos (`GET /api/auth/me/export`). `Hosting.cs`: validación de secretos al arrancar, proxy de confianza, HTTPS + HSTS, errores genéricos, cabeceras de seguridad, `/health/ready`, migración al arrancar. Llave maestra AES-GCM para el anillo de llaves (`MasterKeyXmlEncryption.cs`). `Dockerfile` (no-root, 8080) probado en modo Production contra PostgreSQL. 66 tests.
+- App: Mi cuenta → Privacidad y datos (descargar JSON, eliminar cuenta con código), política de privacidad y términos (`src/content/legal.ts`, Ley 29733) enlazados en el registro, URL de API HTTPS obligatoria en release, galería dev oculta, Facebook oculto, versión 1.0.0, permisos mínimos, `eas.json`, `expo-system-ui`. 175 tests, expo-doctor 21/21, bundle de producción OK.
+- Emulador: RAM subida a 4 GB (con 2 GB se saturaba). La app de pruebas vive en el perfil Android "AlcanciaUX" (usuario 10).
+- Pendiente del dueño: ver `docs/RELEASE_CHECKLIST.md` (desplegar, EAS, keystore, publicar OAuth, completar datos legales, ficha de tienda) y activar su cuenta en la nube en el emulador.
+
 ## Comandos importantes
 
 ```bash

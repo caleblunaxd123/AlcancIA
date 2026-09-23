@@ -47,6 +47,7 @@ function RootNavigator() {
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/register" />
         <Stack.Screen name="auth/forgot-password" />
+        <Stack.Screen name="legal/[doc]" />
         <Stack.Protected guard={authenticated}>
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
@@ -60,6 +61,7 @@ function RootNavigator() {
         <Stack.Screen name="movimiento/[id]" />
         <Stack.Screen name="mas" />
         <Stack.Screen name="cuenta/perfil" />
+        <Stack.Screen name="cuenta/privacidad" />
         <Stack.Screen name="suscripciones/index" />
         <Stack.Screen name="suscripciones/nueva" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="deudas/index" />

@@ -58,6 +58,11 @@ type AuthState = {
   updateName: (name: string) => Promise<AuthResult>;
   changePassword: (input: { currentPassword: string; password: string }) => Promise<AuthResult>;
   logout: () => Promise<void>;
+  /**
+   * Permanently deletes the account. Cloud accounts need a `delete` email ticket
+   * (server erases user, sessions and data); legacy device accounts are local only.
+   */
+  deleteAccount: (ticket?: string) => Promise<AuthResult>;
   /** The server rejected our refresh token (revoked elsewhere): drop to login. */
   sessionLost: () => void;
 };
@@ -192,6 +197,18 @@ export const useAuthStore = create<AuthState>()(
           if (token) await publicRequest('POST', '/api/auth/logout', { refreshToken: token });
           await clearSession();
           set({ authenticated: false });
+        },
+
+        deleteAccount: async (ticket) => {
+          const account = get().account;
+          if (!account) return { ok: false, error: 'No hay una cuenta activa.' };
+          if (account.serverId) {
+            const result = await authRequest('DELETE', '/api/auth/me', { ticket });
+            if (!result.ok) return { ok: false, error: result.error };
+          }
+          await clearSession();
+          set({ account: null, authenticated: false });
+          return { ok: true };
         },
 
         sessionLost: () => set({ authenticated: false }),

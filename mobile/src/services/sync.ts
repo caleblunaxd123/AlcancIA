@@ -84,6 +84,12 @@ function resetLocalData() {
   }
 }
 
+/** Erases every financial/progress record on this device (account deletion, full reset). */
+export function wipeLocalData() {
+  resetLocalData();
+  useSyncStore.getState().resetFor(null);
+}
+
 const hasLocalData = () => {
   const s = useFinancialStore.getState().snapshot;
   return useAppStore.getState().onboarded || s.transactions.length > 0 || s.goals.length > 0 || s.currentBalance.minor !== 0;

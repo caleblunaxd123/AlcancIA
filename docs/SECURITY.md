@@ -27,9 +27,12 @@ _Actualizado: 2026-09-23. Auditoría orientada a producción (§10/§12)._
 - **Sesiones**: JWT HS256 de 15 min (llave de ≥32 bytes en user-secrets/entorno) + refresh token opaco de 32 bytes, guardado como SHA-256, rotativo. Reusar un token rotado revoca toda su familia; el reclamo del token es atómico (`ExecuteUpdate … where RevokedAt is null`), probado con carreras reales en PostgreSQL. Cambio/reseteo de contraseña sube `SecurityStamp` (invalida access tokens al instante) y revoca todas las sesiones.
 - **Registro y recuperación** exigen ticket de verificación de correo (Data Protection, 15 min, un solo uso, ligado a correo+propósito). La recuperación responde igual exista o no el correo (sin enumeración). El login devuelve el mismo error para correo o contraseña incorrectos.
 - **Google**: el servidor valida el access token con Google (audiencia = client IDs propios, correo verificado); nunca confía en el perfil que envía la app.
-- **Datos en reposo (servidor)**: el documento de cada usuario se cifra con ASP.NET Data Protection (llaves persistidas en la base); un test verifica que el texto no aparece en claro. Autorización por usuario: `/api/sync` solo usa el `sub` del token (sin IDs en la ruta, sin IDOR). Límite de 2 MB por documento; reloj del cliente acotado a "ahora".
+- **Datos en reposo (servidor)**: el documento de cada usuario se cifra con ASP.NET Data Protection. Las llaves se guardan en la base **cifradas con AES-256-GCM bajo `DataProtection__MasterKey`**, que vive fuera de la base (secretos del hosting): un volcado de la base por sí solo no permite descifrar. Tests verifican que el texto no aparece en claro y que sin la llave maestra correcta no se puede leer. Autorización por usuario: `/api/sync` solo usa el `sub` del token (sin IDs en la ruta, sin IDOR). Límite de 2 MB por documento; reloj del cliente acotado a "ahora".
 - **Rate limiting** por IP: `auth` (30/5 min), `email` (20/10 min + 1 min por correo y propósito), `sync` (60/min), `ai` (20/min).
-- **Pendiente para producción**: HTTPS obligatorio + HSTS, CORS con el dominio real, llave de firma y connection string desde el gestor de secretos del hosting, rotación de la llave JWT, borrado/exportación de cuenta.
+- **Producción**: la API no arranca sin connection string, llave de firma (≥32 bytes), llave maestra (32 bytes) y correo. Redirige a HTTPS + HSTS 1 año, confía en un solo proxy (`Hosting__BehindProxy`), responde errores genéricos sin detalles internos y agrega `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` y `Cache-Control: no-store`. Imagen Docker no-root.
+- **Borrado y exportación de cuenta**: `DELETE /api/auth/me` exige un ticket de código por correo (propósito `delete`) y borra en cascada usuario, sesiones y datos; `GET /api/auth/me/export` devuelve perfil + datos descifrados.
+- **App en release**: exige `EXPO_PUBLIC_API_URL` https (si no, usa un host no enrutable: nunca envía credenciales por HTTP).
+- **Pendiente**: rotación periódica de la llave JWT (hoy rotarla cierra todas las sesiones), WAF/anti-bot del hosting.
 
 ## Prompt injection (§12)
 
@@ -47,6 +50,6 @@ _Actualizado: 2026-09-23. Auditoría orientada a producción (§10/§12)._
 - [x] JWT corto + refresh token rotativo con detección de replay (atómico).
 - [ ] Autorización por household **en servidor** (IDOR): ningún dato de otro miembro sin permiso explícito.
 - [ ] DTOs de entrada validados (FluentValidation/DataAnnotations), sin mass-assignment (modelos explícitos).
-- [ ] HTTPS obligatorio + HSTS; cookies/tokens fuera de logs.
+- [x] HTTPS obligatorio + HSTS; tokens fuera de logs.
 - [x] Migraciones EF Core revisadas (probadas en PostgreSQL real). Pendiente índice `(householdId)` al compartir.
 - [ ] Borrado de cuenta y exportación de datos (§21).

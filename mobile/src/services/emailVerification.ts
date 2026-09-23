@@ -5,7 +5,7 @@ import { API_BASE_URL } from '@/constants/config';
  * address; the returned ticket lets the server create the account or reset it. The
  * code itself is never stored or logged on the device.
  */
-export type EmailCodePurpose = 'register' | 'recover';
+export type EmailCodePurpose = 'register' | 'recover' | 'delete';
 
 export type RequestCodeResult =
   | { ok: true; challengeId: string; resendAfterSeconds: number }

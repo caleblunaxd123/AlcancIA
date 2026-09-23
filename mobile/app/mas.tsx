@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, Switch, View } from 'react-native';
 
@@ -33,6 +34,7 @@ export default function Mas() {
     { label: 'Suscripciones', icon: 'repeat', href: '/suscripciones', sub: 'Lo que pagas cada mes' },
     { label: 'Deudas', icon: 'credit-card', href: '/deudas', sub: 'Tu camino para salir' },
     { label: 'Calendario', icon: 'calendar', href: '/calendario', sub: 'Tus pagos e ingresos del mes' },
+    { label: 'Privacidad y datos', icon: 'shield-check', href: '/cuenta/privacidad', sub: 'Descarga o elimina tu cuenta y tus datos' },
   ];
 
   const confirmReset = () => {
@@ -132,6 +134,7 @@ export default function Mas() {
           <Icon name="rotate-ccw" size={16} color="negative" />
           <Text variant="bodyStrong" color="negative">Reiniciar AlcancIA</Text>
         </Pressable>
+        <Text variant="caption" color="muted" center>AlcancIA {Constants.expoConfig?.version ?? ''}</Text>
       </ScrollView>
     </Screen>
   );
