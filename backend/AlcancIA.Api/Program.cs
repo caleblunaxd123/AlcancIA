@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using AlcancIA.Application.Ai;
 using AlcancIA.Infrastructure;
 using Microsoft.AspNetCore.RateLimiting;
+using AlcancIA.Api;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IVerificationMailer, SmtpVerificationMailer>();
+builder.Services.AddSingleton<EmailVerification>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // CORS for the mobile app / local dev. Tighten origins for production.
@@ -33,6 +37,9 @@ builder.Services.AddCors(options =>
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("email", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { Window = TimeSpan.FromMinutes(10), PermitLimit = 20, QueueLimit = 0 }));
     options.AddPolicy("ai", context => RateLimitPartition.GetFixedWindowLimiter(
         partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         factory: _ => new FixedWindowRateLimiterOptions
@@ -52,6 +59,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("app");
 app.UseRateLimiter();
+
+app.MapPost("/api/email/request", async (EmailCodeRequest request, EmailVerification verification, CancellationToken ct) =>
+{
+    if (!EmailVerification.Valid(request.Email?.Trim().ToLowerInvariant(), request.Purpose))
+        return Results.BadRequest(new { error = "Revisa el correo electrónico." });
+    var result = await verification.Request(request.Email!, request.Purpose!, ct);
+    return Results.Json(result.Body, statusCode: result.Status);
+}).RequireRateLimiting("email");
+
+app.MapPost("/api/email/verify", (EmailCodeVerify request, EmailVerification verification) =>
+{
+    if (request.ChallengeId is not { Length: 64 } || request.Email is null || request.Purpose is null || request.Code is not { Length: 6 }
+        || !verification.Verify(request.ChallengeId, request.Email, request.Purpose, request.Code))
+        return Results.BadRequest(new { error = "El código no es válido o venció. Revisa el correo o solicita otro." });
+    return Results.Ok(new { verified = true });
+}).RequireRateLimiting("email");
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "AlcancIA.Api" }))
     .WithName("Health");

@@ -53,6 +53,23 @@ Calidad: typecheck ✅ · lint ✅ · jest 148/148 ✅.
 - Verificado en emulador Medium_Phone_API_36.1: login → Google → cuenta nueva → onboarding ✅. (El Pixel_8_Pro no tiene espacio: 93% lleno.)
 - Pendiente: cliente Android de release (SHA-1 de producción), publicar la app OAuth, Facebook (falta Meta App ID), migrar a Google Sign-In nativo.
 
+### Prueba de usuario nuevo + verificación por correo (2026-09-23)
+Recorrido como usuario nuevo en el emulador. Errores corregidos:
+- Día de pago 30 se guardaba como 28 (`Math.min(28, …)`) → ahora se respeta (`nextPayDateISO` = `recurrenceAnchor`).
+- Pagos fijos con días ocultos (alquiler 5, internet 8): el usuario elige el día; "¿Cómo lo calculamos?" lista los pagos que cubre el próximo ingreso (`coveredByNextIncome`) y explica cada línea en lenguaje simple.
+- Pantalla final del onboarding mostraba 40% fijo → resumen real (puedes gastar, pagos fijos, meta).
+- Meta: Emergencia sugiere 3 meses de pagos fijos; aviso si el monto supera 10 años de ingreso (antes se concatenaba el valor sugerido y salía S/ 30,002,000).
+- Saludo: "Buenos días" a la 1 a. m. → noche de 19:00 a 04:59.
+Verificación por correo: registro (código antes de crear la cuenta) y recuperación (código → nueva contraseña; palabra de recuperación como alternativa sin conexión). `EmailCodeStep`, `services/emailVerification.ts`, `authStore.emailVerifiedAt` y `resetPasswordWithVerifiedEmail`. Backend: 9 tests de `EmailVerification`.
+
+Configurar Gmail (una vez, fuera del repo):
+```bash
+cd backend
+dotnet user-secrets set "Email:Username" "tu-cuenta@gmail.com" --project AlcancIA.Api
+dotnet user-secrets set "Email:Password" "<contraseña de aplicación de 16 letras>" --project AlcancIA.Api
+```
+Pendiente: probar en el emulador el envío real de correos (necesita la contraseña de aplicación) y el recorrido del onboarding corregido.
+
 ## Comandos importantes
 
 ```bash

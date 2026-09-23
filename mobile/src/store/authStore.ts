@@ -20,6 +20,8 @@ type LocalAccount = {
   passwordSalt: string;
   recoveryHash: string;
   recoverySalt: string;
+  /** When the owner proved control of `email` with a one-time code. */
+  emailVerifiedAt?: string;
   createdAt: string;
 };
 
@@ -31,11 +33,13 @@ type AuthState = {
   account: LocalAccount | null;
   authenticated: boolean;
   hydrated: boolean;
-  register: (input: { name: string; email: string; password: string; recoveryAnswer: string }) => Promise<AuthResult>;
+  register: (input: { name: string; email: string; password: string; recoveryAnswer: string; emailVerifiedAt?: string }) => Promise<AuthResult>;
   login: (email: string, password: string) => Promise<AuthResult>;
   /** Sign in (or create the device account) with a verified Google/Facebook profile. */
   socialSignIn: (profile: SocialProfile) => AuthResult;
   resetPassword: (input: { email: string; recoveryAnswer: string; password: string }) => Promise<AuthResult>;
+  /** Reset after the email code was verified by the server (no recovery word needed). */
+  resetPasswordWithVerifiedEmail: (input: { email: string; password: string }) => Promise<AuthResult>;
   updateProfile: (input: { name: string; email: string }) => AuthResult;
   changePassword: (input: { currentPassword: string; password: string }) => Promise<AuthResult>;
   logout: () => void;
@@ -56,7 +60,7 @@ export const useAuthStore = create<AuthState>()(
       authenticated: false,
       hydrated: false,
 
-      register: async ({ name, email, password, recoveryAnswer }) => {
+      register: async ({ name, email, password, recoveryAnswer, emailVerifiedAt }) => {
         const cleanName = name.trim();
         const cleanEmail = normalizeEmail(email);
         if (cleanName.length < 2) return { ok: false, error: 'Escribe tu nombre.' };
@@ -81,6 +85,7 @@ export const useAuthStore = create<AuthState>()(
             passwordSalt,
             recoveryHash,
             recoverySalt,
+            emailVerifiedAt,
             createdAt: new Date().toISOString(),
           },
           authenticated: true,
@@ -151,6 +156,25 @@ export const useAuthStore = create<AuthState>()(
         return { ok: true };
       },
 
+      resetPasswordWithVerifiedEmail: async ({ email, password }) => {
+        const account = get().account;
+        if (!account || normalizeEmail(email) !== account.email) {
+          return { ok: false, error: 'No encontramos esa cuenta en este dispositivo.' };
+        }
+        if (account.provider && account.provider !== 'password') {
+          return { ok: false, error: 'Esta cuenta no usa contraseña: entra con Google o Facebook.' };
+        }
+        const passwordError = validatePassword(password);
+        if (passwordError) return { ok: false, error: passwordError };
+        const passwordSalt = await randomSalt();
+        const passwordHash = await hashSecret(password, passwordSalt);
+        set({
+          account: { ...account, passwordSalt, passwordHash, emailVerifiedAt: account.emailVerifiedAt ?? new Date().toISOString() },
+          authenticated: false,
+        });
+        return { ok: true };
+      },
+
       updateProfile: ({ name, email }) => {
         const account = get().account;
         if (!account) return { ok: false, error: 'No hay una cuenta activa.' };
@@ -159,7 +183,8 @@ export const useAuthStore = create<AuthState>()(
         if (cleanName.length < 2) return { ok: false, error: 'Escribe tu nombre.' };
         const emailError = validateEmail(cleanEmail);
         if (emailError) return { ok: false, error: emailError };
-        set({ account: { ...account, name: cleanName, email: cleanEmail } });
+        const emailVerifiedAt = cleanEmail === account.email ? account.emailVerifiedAt : undefined;
+        set({ account: { ...account, name: cleanName, email: cleanEmail, emailVerifiedAt } });
         return { ok: true };
       },
 
