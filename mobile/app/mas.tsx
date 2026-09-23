@@ -51,7 +51,7 @@ export default function Mas() {
   const confirmLogout = () => {
     Alert.alert('Cerrar sesión', 'Tus datos permanecerán guardados de forma segura en este dispositivo.', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Cerrar sesión', onPress: () => { logout(); router.replace('/auth/login'); } },
+      { text: 'Cerrar sesión', onPress: () => { logout(); } },
     ]);
   };
 

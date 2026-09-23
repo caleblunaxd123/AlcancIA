@@ -61,7 +61,7 @@ export default function NewDebt() {
   };
 
   return (
-    <Screen edges={{ top: true, bottom: true }}>
+    <Screen keyboardAware edges={{ top: true, bottom: true }}>
       <View style={{ padding: theme.spacing.xl }}><PageHeader eyebrow={existing ? 'Plan actualizado' : 'Orden sin culpa'} title={existing ? 'Editar deuda' : 'Nueva deuda'} subtitle={existing ? 'Mantén tu ruta de pago al día' : 'Conocerla es el primer paso para reducirla'} icon="credit-card" action={<HeaderIconButton icon="x" label="Cerrar" onPress={() => router.back()} />} /></View>
 
       <ScrollView

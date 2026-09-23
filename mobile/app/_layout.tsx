@@ -9,8 +9,8 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { setStatusBarStyle } from 'expo-status-bar';
-import { useCallback, useEffect } from 'react';
-import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -25,6 +25,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootNavigator() {
   const theme = useTheme();
+  const authenticated = useAuthStore((state) => state.authenticated);
   // Imperative default (a declarative <StatusBar> here would re-apply on every
   // render and override screens with a dark header, see useLightStatusBar).
   useEffect(() => {
@@ -44,6 +45,7 @@ function RootNavigator() {
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/register" />
         <Stack.Screen name="auth/forgot-password" />
+        <Stack.Protected guard={authenticated}>
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
@@ -65,6 +67,8 @@ function RootNavigator() {
         <Stack.Screen name="compartidos/nuevo" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="compartidos/[id]" />
         <Stack.Screen name="compartidos/gasto" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="retos" />
+        </Stack.Protected>
       </Stack>
     </View>
   );
@@ -83,22 +87,36 @@ export default function RootLayout() {
   const authHydrated = useAuthStore((s) => s.hydrated);
   const finHydrated = useFinancialStore((s) => s.hydrated);
   const sharedHydrated = useSharedStore((s) => s.hydrated);
-  const ready = (fontsLoaded || fontError) && appHydrated && authHydrated && finHydrated && sharedHydrated;
+  const [loadDelayed, setLoadDelayed] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadDelayed(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+  const ready = (fontsLoaded || fontError || loadDelayed) && appHydrated && authHydrated && finHydrated && sharedHydrated;
 
   useEffect(() => {
-    if (ready) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [ready]);
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
-  const onLayout = useCallback(() => {}, []);
-
-  if (!ready) return null;
+  if (!ready) return (
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', padding: 32, gap: 18 }}>
+      <Text style={{ fontSize: 30, fontWeight: '700', color: '#0F172A' }}>AlcancIA</Text>
+      <ActivityIndicator size="large" color="#00B980" />
+      <Text accessibilityLiveRegion="polite" style={{ color: '#475569', textAlign: 'center' }}>
+        {loadDelayed ? 'Está tomando más de lo esperado. Puedes intentar cargar de nuevo.' : 'Preparando tu AlcancIA…'}
+      </Text>
+      {loadDelayed ? <Pressable accessibilityRole="button" onPress={() => {
+        for (const store of [useAppStore, useAuthStore, useFinancialStore, useSharedStore]) {
+          Promise.resolve(store.persist.rehydrate()).catch(() => {});
+        }
+      }} style={{ padding: 16 }}><Text style={{ color: '#007F5F', fontWeight: '700' }}>Volver a intentar</Text></Pressable> : null}
+    </View>
+  );
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayout}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemeProvider>
+        <ThemeProvider fontsReady={fontsLoaded}>
           <ErrorBoundary>
             <RootNavigator />
           </ErrorBoundary>

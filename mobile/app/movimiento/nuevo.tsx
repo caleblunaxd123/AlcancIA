@@ -69,7 +69,7 @@ export default function NewTransaction() {
   };
 
   return (
-    <Screen edges={{ top: true, bottom: true }}>
+    <Screen keyboardAware edges={{ top: true, bottom: true }}>
       <View style={{ padding: theme.spacing.xl }}><PageHeader eyebrow={existing ? 'Ajuste preciso' : 'Registro rápido'} title={existing ? 'Editar movimiento' : 'Registrar movimiento'} subtitle={existing ? 'El saldo se recalculará automáticamente' : 'Añádelo en menos de un minuto'} icon="receipt-text" action={<HeaderIconButton icon="x" label="Cerrar" onPress={() => router.back()} />} /></View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

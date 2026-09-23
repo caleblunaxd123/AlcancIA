@@ -62,7 +62,7 @@ export default function NewSubscription() {
   };
 
   return (
-    <Screen edges={{ top: true, bottom: true }}>
+    <Screen keyboardAware edges={{ top: true, bottom: true }}>
       <View style={{ padding: theme.spacing.xl }}><PageHeader eyebrow={existing ? 'Cobro actualizado' : 'Control recurrente'} title={existing ? 'Editar suscripción' : 'Nueva suscripción'} subtitle={existing ? 'Ajusta monto, frecuencia o renovación' : 'Mira su costo mensual y anual'} icon="repeat" action={<HeaderIconButton icon="x" label="Cerrar" onPress={() => router.back()} />} /></View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

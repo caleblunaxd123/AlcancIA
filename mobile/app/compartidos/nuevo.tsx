@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Button } from '@/components/common/Button';
 import { HeaderIconButton, PageHeader } from '@/components/common/PageHeader';
@@ -68,7 +68,7 @@ export default function NewGroup() {
 
   return (
     <Screen edges={{ top: true, bottom: true }}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <View style={{ padding: theme.spacing.xl }}>
           <PageHeader
             title="Nuevo grupo"

@@ -30,7 +30,7 @@ export function useSocialSignIn() {
         useSharedStore.getState().reset();
         useAppStore.getState().resetOnboarding();
       }
-      router.replace('/');
+      router.replace(useAppStore.getState().onboarded ? '/(tabs)' : '/onboarding');
     },
     [router],
   );

@@ -2,7 +2,7 @@ import * as Facebook from 'expo-auth-session/providers/facebook';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Text } from '@/components/common/Text';
@@ -183,24 +183,6 @@ function FacebookButton({ onProfile, onError, busy, setBusy }: ChildProps) {
   );
 }
 
-/** Shown when a provider has no client id in this build — explains instead of failing. */
-function UnconfiguredButton({ provider }: { provider: Provider }) {
-  const name = provider === 'google' ? 'Google' : 'Facebook';
-  return (
-    <ProviderButton
-      provider={provider}
-      label={`Continuar con ${name}`}
-      busy={false}
-      onPress={() =>
-        Alert.alert(
-          `Acceso con ${name} no activado`,
-          `Esta versión de AlcancIA aún no tiene habilitado el acceso con ${name}. Crea tu cuenta con tu correo en segundos; tus datos quedan igual de protegidos.`,
-        )
-      }
-    />
-  );
-}
-
 /**
  * "O continúa con": Google + Facebook side by side. Each provider hook is only
  * mounted when its client id exists (the hooks throw otherwise).
@@ -219,6 +201,7 @@ export function SocialAuthButtons({
 }) {
   const theme = useTheme();
   const [busy, setBusy] = useState<Provider | null>(null);
+  if (!isGoogleConfigured() && !isFacebookConfigured()) return null;
 
   const divider = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
@@ -234,14 +217,10 @@ export function SocialAuthButtons({
       <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
         {isGoogleConfigured() ? (
           <GoogleButton onProfile={onProfile} onError={onError} busy={busy === 'google'} setBusy={(b) => setBusy(b ? 'google' : null)} />
-        ) : (
-          <UnconfiguredButton provider="google" />
-        )}
+        ) : null}
         {isFacebookConfigured() ? (
           <FacebookButton onProfile={onProfile} onError={onError} busy={busy === 'facebook'} setBusy={(b) => setBusy(b ? 'facebook' : null)} />
-        ) : (
-          <UnconfiguredButton provider="facebook" />
-        )}
+        ) : null}
       </View>
       {dividerFirst ? null : divider}
     </View>

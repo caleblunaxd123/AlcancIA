@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Keyboard, Pressable, View } from 'react-native';
 
 import { AuthShell } from '@/components/auth/AuthShell';
 import { SocialAuthButtons } from '@/components/auth/SocialAuthButtons';
@@ -10,6 +10,7 @@ import { Text } from '@/components/common/Text';
 import { TextField } from '@/components/common/TextField';
 import { useSocialSignIn } from '@/hooks/useSocialSignIn';
 import { useAuthStore } from '@/store/authStore';
+import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
 
 export default function Login() {
@@ -25,15 +26,17 @@ export default function Login() {
   const social = useSocialSignIn();
 
   const submit = async () => {
+    if (loading) return;
+    Keyboard.dismiss();
     setLoading(true); setError('');
     const result = await login(email, password);
     setLoading(false);
     if (!result.ok) return setError(result.error);
-    router.replace('/');
+    router.replace(useAppStore.getState().onboarded ? '/(tabs)' : '/onboarding');
   };
 
   return (
-    <AuthShell compact eyebrow="Acceso seguro" title="Ingresa a tu cuenta" subtitle="Usa tu correo y contraseña, o continúa con Google o Facebook.">
+    <AuthShell compact eyebrow="Acceso seguro" title="Ingresa a tu cuenta" subtitle="Entra con el método que elegiste al crear tu cuenta.">
       <View style={{ gap: theme.spacing.lg }}>
         <TextField label="Correo electrónico" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" placeholder="tu@correo.com" />
         <View>

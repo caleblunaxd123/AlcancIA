@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import {
   AccessibilityInfo,
+  Platform,
   useColorScheme as useSystemColorScheme,
 } from 'react-native';
 
@@ -27,7 +28,7 @@ export type Theme = {
   radius: typeof radius;
   elevation: typeof elevation;
   typography: typeof typography;
-  fontFamily: typeof fontFamily;
+  fontFamily: Record<keyof typeof fontFamily, string>;
   motion: typeof motion;
   timing: typeof timing;
   spring: typeof spring;
@@ -45,15 +46,24 @@ type ThemeContextValue = Theme & {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function buildTheme(scheme: ColorScheme, reducedMotion: boolean): Theme {
+function buildTheme(scheme: ColorScheme, reducedMotion: boolean, fontsReady: boolean): Theme {
+  const systemFamily = Platform.OS === 'ios' ? 'System' : 'sans-serif';
+  const fallbackFamilies = Object.fromEntries(Object.keys(fontFamily).map((key) => [key, systemFamily])) as Theme['fontFamily'];
+  const weights: Record<string, '400' | '500' | '600' | '700' | '800'> = {
+    [fontFamily.regular]: '400', [fontFamily.medium]: '500', [fontFamily.semibold]: '600',
+    [fontFamily.bold]: '700', [fontFamily.extrabold]: '800',
+  };
+  const fallbackTypography = Object.fromEntries(Object.entries(typography).map(([key, style]) => [key, {
+    ...style, fontFamily: systemFamily, fontWeight: weights[style.fontFamily ?? ''] ?? '400',
+  }])) as typeof typography;
   return {
     scheme,
     colors: scheme === 'dark' ? darkColors : lightColors,
     spacing,
     radius,
     elevation,
-    typography,
-    fontFamily,
+    typography: fontsReady ? typography : fallbackTypography,
+    fontFamily: fontsReady ? fontFamily : fallbackFamilies,
     motion,
     timing,
     spring,
@@ -64,7 +74,7 @@ function buildTheme(scheme: ColorScheme, reducedMotion: boolean): Theme {
   };
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({ children, fontsReady = true }: { children: React.ReactNode; fontsReady?: boolean }) {
   const systemScheme = useSystemColorScheme();
   const preference = useAppStore((s) => s.themePreference);
   const setPreference = useAppStore((s) => s.setThemePreference);
@@ -90,11 +100,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<ThemeContextValue>(
     () => ({
-      ...buildTheme(scheme, reducedMotion),
+      ...buildTheme(scheme, reducedMotion, fontsReady),
       preference,
       setPreference,
     }),
-    [scheme, reducedMotion, preference, setPreference],
+    [scheme, reducedMotion, fontsReady, preference, setPreference],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -13,6 +13,8 @@ import { Chip } from '@/components/common/Chip';
 import { Icon } from '@/components/common/Icon';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
+import { TextField } from '@/components/common/TextField';
+import { parseMoneyInput } from '@/utils/validation';
 import { HeaderIconButton, PageHeader } from '@/components/common/PageHeader';
 import { fromMajor, toMajor } from '@/engine/money';
 import { simulatePurchase, type PurchaseVerdict } from '@/engine/purchase';
@@ -45,36 +47,33 @@ export default function CanIBuyIt() {
   }, [completeStep]);
 
   const safeMajor = toMajor(snapshot.currentBalance);
-  const sliderMax = Math.max(2000, Math.round(safeMajor));
-  const [amount, setAmount] = useState(350);
+  const [amountInput, setAmountInput] = useState('350');
+  const parsedAmount = parseMoneyInput(amountInput);
+  const amount = parsedAmount ?? 0;
+  const sliderMax = Math.max(2000, Math.round(safeMajor), amount);
   const [category, setCategory] = useState<string | null>(null);
 
   const sim = useMemo(
-    () => simulatePurchase(snapshot, fromMajor(amount).minor),
-    [snapshot, amount],
+    () => parsedAmount === null ? null : simulatePurchase(snapshot, fromMajor(parsedAmount).minor),
+    [snapshot, parsedAmount],
   );
-  const vs = VERDICT_STYLE[sim.verdict];
+  const vs = sim ? VERDICT_STYLE[sim.verdict] : null;
 
   const onSlide = (v: number) => {
-    setAmount(v);
+    setAmountInput(String(v));
     Haptics.selectionAsync().catch(() => {});
   };
 
   return (
-    <Screen edges={{ top: true, bottom: true }}>
+    <Screen keyboardAware edges={{ top: true, bottom: true }}>
       <View style={{ padding: theme.spacing.xl }}>
         <PageHeader title="¿Puedo comprarlo?" subtitle="Escribe el precio y mira el impacto antes de gastar" icon="scan-line" action={<HeaderIconButton icon="x" label="Cerrar" onPress={() => router.back()} />} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Amount + slider */}
         <Card>
-          <Text variant="label" color="muted">
-            Monto
-          </Text>
-          <View style={{ alignItems: 'center', marginVertical: theme.spacing.lg }}>
-            <Money amount={fromMajor(amount)} size="display" showDecimals={false} />
-          </View>
+          <TextField label="Precio de la compra" prefix="S/" keyboardType="decimal-pad" value={amountInput} onChangeText={setAmountInput} helperText="Es una simulación: no registra un gasto ni realiza una compra." error={parsedAmount === null ? 'Escribe un precio mayor que cero, con hasta 2 decimales.' : undefined} />
           <ScenarioSlider
             min={0}
             max={sliderMax}
@@ -99,7 +98,7 @@ export default function CanIBuyIt() {
                 selected={category === p.label}
                 onPress={() => {
                   setCategory(p.label);
-                  setAmount(p.amount);
+                  setAmountInput(String(p.amount));
                   Haptics.selectionAsync().catch(() => {});
                 }}
               />
@@ -107,21 +106,22 @@ export default function CanIBuyIt() {
           </View>
         </View>
 
+        {sim && vs ? <>
         {/* Balance scale ANTES / DESPUÉS */}
         <Card variant="highlight">
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={{ flex: 1, alignItems: 'center', gap: theme.spacing.xs }}>
               <Text variant="label" color="muted">
-                Antes
+                Disponible antes
               </Text>
-              <Money amount={sim.before} size="medium" showDecimals={false} />
+              <Money amount={sim.before} size="medium" />
             </View>
             <Icon name="arrow-right" size={24} color="brand" />
             <View style={{ flex: 1, alignItems: 'center', gap: theme.spacing.xs }}>
               <Text variant="label" color="muted">
-                Después
+                Disponible después
               </Text>
-              <Money amount={sim.after} size="medium" color={sim.wouldExceed ? 'negative' : 'positive'} showDecimals={false} />
+              <Money amount={sim.after} size="medium" color={sim.wouldExceed ? 'negative' : 'positive'} />
             </View>
           </View>
         </Card>
@@ -166,12 +166,13 @@ export default function CanIBuyIt() {
         </Card>
 
         <Button
-          label="Guardar simulación"
+          label="Terminar simulación"
           variant="secondary"
-          icon="bookmark"
+          icon="check"
           fullWidth
           onPress={() => router.back()}
         />
+        </> : null}
       </ScrollView>
     </Screen>
   );

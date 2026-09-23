@@ -48,7 +48,7 @@ export default function ProfileSettings() {
   };
 
   return (
-    <Screen edges={{ top: true }}>
+    <Screen keyboardAware edges={{ top: true }}>
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, gap: theme.spacing.xl, paddingBottom: theme.spacing.huge }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <PageHeader title="Mi perfil" subtitle="Tu nombre, correo y contraseña" onBack={() => router.back()} />
         <Card>

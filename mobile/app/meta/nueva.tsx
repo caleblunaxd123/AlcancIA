@@ -74,7 +74,7 @@ export default function NewGoal() {
   };
 
   return (
-    <Screen edges={{ top: true, bottom: true }}>
+    <Screen keyboardAware edges={{ top: true, bottom: true }}>
       <View style={{ padding: theme.spacing.xl }}><PageHeader eyebrow={existing ? 'Plan en evolución' : 'Un sueño con plan'} title={existing ? 'Editar meta' : 'Nueva meta'} subtitle={existing ? 'Actualiza el objetivo sin perder tu avance' : 'Dale nombre, monto y ritmo'} icon="target" action={<HeaderIconButton icon="x" label="Cerrar" onPress={() => router.back()} />} /></View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

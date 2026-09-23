@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   TextInput,
@@ -54,7 +53,7 @@ function localAnswer(key: string, snapshot: ReturnType<typeof useFinancialStore.
     if (goal) {
       const projection = projectGoal(goal);
       return {
-        summary: `Vas ${Math.round(projection.progress * 100)}% en “${goal.name}”. Al ritmo actual podrías llegar cerca de ${projection.etaDate ? formatMonthYear(projection.etaDate) : 'tu fecha objetivo'}.`,
+        summary: `Vas ${Math.round(projection.progress * 100)}% en “${goal.name}”. ${projection.etaDate ? `Al ritmo actual podrías llegar cerca de ${formatMonthYear(projection.etaDate)}.` : 'Define cuánto quieres aportar al mes para estimar cuándo llegarás.'}`,
         impactLevel: 'medium',
         facts: [`Ya reuniste ${formatMoney(goal.saved, { hideDecimalsWhenRound: true })} de ${formatMoney(goal.target, { hideDecimalsWhenRound: true })}.`],
         recommendations: ['Un aporte adicional pequeño puede acortar el camino sin presionarte.'],
@@ -145,7 +144,7 @@ export default function AssistantHome() {
 
   return (
     <Screen>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={{ padding: theme.spacing.xl, paddingBottom: theme.spacing.xxl, gap: theme.spacing.lg }}
@@ -163,10 +162,10 @@ export default function AssistantHome() {
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
                   <Icon name="shield-check" size={15} color="positive" />
-                  <Text variant="caption" color="positive">Tus cálculos ocurren en el motor financiero</Text>
+                  <Text variant="caption" color="positive">Calculamos con los datos que registras</Text>
                 </View>
                 <Text variant="caption" color="muted">
-                  Al enviar una pregunta, compartimos únicamente el resumen financiero visible aquí; nunca tu historial completo.
+                  Al preguntar, enviamos tu mensaje y un resumen de ingresos, gastos por categoría, próximos pagos y metas; no el detalle de cada movimiento.
                 </Text>
               </View>
               <View style={{ position: 'absolute', right: 8, bottom: 4 }}>
@@ -300,7 +299,7 @@ function AiAnswerCard({ answer }: { answer: AiAnswer }) {
           </View>
         ))}
         <Text variant="caption" color="muted" style={{ marginTop: theme.spacing.lg }}>
-          Fuente: {answer.source === 'device' || answer.source === 'local' ? 'motor local del dispositivo' : answer.source}. Tú decides; AlcancIA te muestra el impacto.
+          {answer.source === 'device' ? 'Respuesta calculada en tu dispositivo.' : answer.source === 'local' ? 'Respuesta calculada con tus datos.' : 'Respuesta del asistente IA.'} Tú decides; AlcancIA te muestra el impacto.
         </Text>
       </Card>
     </Animated.View>
