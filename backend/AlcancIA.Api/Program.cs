@@ -2,8 +2,18 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using AlcancIA.Application.Ai;
 using AlcancIA.Infrastructure;
-using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Cryptography;
 using AlcancIA.Api;
+using AlcancIA.Api.Auth;
+using AlcancIA.Api.Sync;
+using AlcancIA.Domain.Accounts;
+using AlcancIA.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +33,42 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IVerificationMailer, SmtpVerificationMailer>();
 builder.Services.AddSingleton<EmailVerification>();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddPersistence(builder.Configuration);
+
+// Accounts: PBKDF2 password hashes, JWT access tokens, rotating refresh tokens.
+builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<TokenService>();
+builder.Services.AddSingleton<VerificationTickets>();
+builder.Services.AddHttpClient<IGoogleTokenVerifier, GoogleTokenVerifier>(c => c.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<AuthOptions>>((jwt, auth) =>
+    {
+        var o = auth.Value;
+        jwt.MapInboundClaims = false;
+        jwt.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = o.Issuer,
+            ValidAudience = o.Audience,
+            IssuerSigningKey = o.SigningKey.Length >= 32 ? o.Key() : null,
+            ValidateIssuerSigningKey = true,
+            ClockSkew = TimeSpan.FromSeconds(30),
+        };
+        jwt.Events = new JwtBearerEvents
+        {
+            // A password reset bumps the stamp: older access tokens stop working at once.
+            OnTokenValidated = async ctx =>
+            {
+                var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                var id = AccountEndpoints.UserId(ctx.Principal!);
+                var stamp = ctx.Principal!.FindFirst(TokenService.StampClaim)?.Value;
+                var user = id is null ? null : await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id);
+                if (user is null || user.SecurityStamp.ToString() != stamp) ctx.Fail("stale session");
+            },
+        };
+    });
 
 // CORS for the mobile app / local dev. Tighten origins for production.
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ??
@@ -40,6 +86,12 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("email", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { Window = TimeSpan.FromMinutes(10), PermitLimit = 20, QueueLimit = 0 }));
+    options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { Window = TimeSpan.FromMinutes(5), PermitLimit = 30, QueueLimit = 0 }));
+    options.AddPolicy("sync", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { Window = TimeSpan.FromMinutes(1), PermitLimit = 60, QueueLimit = 0 }));
     options.AddPolicy("ai", context => RateLimitPartition.GetFixedWindowLimiter(
         partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         factory: _ => new FixedWindowRateLimiterOptions
@@ -59,21 +111,33 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("app");
 app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
 
-app.MapPost("/api/email/request", async (EmailCodeRequest request, EmailVerification verification, CancellationToken ct) =>
+app.MapAccountEndpoints();
+app.MapSyncEndpoints();
+
+app.MapPost("/api/email/request", async (EmailCodeRequest request, EmailVerification verification, AppDbContext db, CancellationToken ct) =>
 {
-    if (!EmailVerification.Valid(request.Email?.Trim().ToLowerInvariant(), request.Purpose))
+    var email = request.Email?.Trim().ToLowerInvariant();
+    if (!EmailVerification.Valid(email, request.Purpose))
         return Results.BadRequest(new { error = "Revisa el correo electrónico." });
-    var result = await verification.Request(request.Email!, request.Purpose!, ct);
+    if (request.Purpose == "register" && await db.Users.AnyAsync(u => u.Email == email, ct))
+        return Results.Json(new { error = "Ya existe una cuenta con ese correo. Inicia sesión." }, statusCode: 409);
+    // Recovery never reveals whether an address is registered: same answer, no email sent.
+    if (request.Purpose == "recover" && !await db.Users.AnyAsync(u => u.Email == email && u.Provider == "password", ct))
+        return Results.Ok(new { challengeId = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), expiresInSeconds = 600, resendAfterSeconds = 60 });
+    var result = await verification.Request(email!, request.Purpose!, ct);
     return Results.Json(result.Body, statusCode: result.Status);
 }).RequireRateLimiting("email");
 
-app.MapPost("/api/email/verify", (EmailCodeVerify request, EmailVerification verification) =>
+app.MapPost("/api/email/verify", (EmailCodeVerify request, EmailVerification verification, VerificationTickets tickets) =>
 {
     if (request.ChallengeId is not { Length: 64 } || request.Email is null || request.Purpose is null || request.Code is not { Length: 6 }
         || !verification.Verify(request.ChallengeId, request.Email, request.Purpose, request.Code))
         return Results.BadRequest(new { error = "El código no es válido o venció. Revisa el correo o solicita otro." });
-    return Results.Ok(new { verified = true });
+    // The ticket is what register / reset-password accept as proof of the code.
+    return Results.Ok(new { verified = true, ticket = tickets.Issue(EmailVerification.Normalize(request.Email), request.Purpose) });
 }).RequireRateLimiting("email");
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "AlcancIA.Api" }))

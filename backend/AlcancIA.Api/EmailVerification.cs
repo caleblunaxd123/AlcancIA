@@ -34,8 +34,9 @@ public sealed class SmtpVerificationMailer(IConfiguration config) : IVerificatio
     }
 }
 
-// Email ownership proof for the device-local account. This is NOT server authentication.
-// Single API instance: restarting it invalidates pending codes, never activates an account.
+// Email ownership proof. A verified code yields a VerificationTickets ticket, which
+// register / reset-password require. Pending codes live in memory (single instance):
+// restarting the API only invalidates codes not yet verified.
 public sealed class EmailVerification(IVerificationMailer mailer, TimeProvider clock)
 {
     private sealed record Challenge(string Email, string Purpose, byte[] Digest, DateTimeOffset Expires)
@@ -61,9 +62,11 @@ public sealed class EmailVerification(IVerificationMailer mailer, TimeProvider c
         {
             foreach (var expired in challenges.Where(x => x.Value.Expires <= now).ToArray()) challenges.TryRemove(expired.Key, out _);
             foreach (var expired in cooldowns.Where(x => x.Value <= now).ToArray()) cooldowns.Remove(expired.Key);
-            if (cooldowns.ContainsKey(email)) return (429, new { error = "Espera un minuto antes de solicitar otro código." });
+            // Per address and purpose: registering never blocks an immediate recovery code.
+            var cooldownKey = $"{purpose}:{email}";
+            if (cooldowns.ContainsKey(cooldownKey)) return (429, new { error = "Espera un minuto antes de solicitar otro código." });
             if (challenges.Count >= 10000) return (503, new { error = "Inténtalo más tarde." });
-            cooldowns[email] = now.AddMinutes(1);
+            cooldowns[cooldownKey] = now.AddMinutes(1);
         }
         var id = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
         var code = RandomNumberGenerator.GetInt32(1000000).ToString("D6");

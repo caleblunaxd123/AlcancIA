@@ -1,5 +1,8 @@
 using AlcancIA.Application.Ai;
 using AlcancIA.Infrastructure.Ai;
+using AlcancIA.Infrastructure.Persistence;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -45,6 +48,25 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IChatService, ChatService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// PostgreSQL (ConnectionStrings:Database) plus the Data Protection key ring
+    /// persisted in the same database. Tests replace the DbContext options.
+    /// </summary>
+    public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration config)
+    {
+        var connection = config.GetConnectionString("Database");
+        services.AddDbContext<AppDbContext>(options =>
+        {
+            if (!string.IsNullOrWhiteSpace(connection)) options.UseNpgsql(connection);
+        });
+
+        services.AddDataProtection()
+            .SetApplicationName("AlcancIA")
+            .PersistKeysToDbContext<AppDbContext>();
 
         return services;
     }

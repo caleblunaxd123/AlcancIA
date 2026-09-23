@@ -1,0 +1,25 @@
+# Local development database for the AlcancIA API.
+#   docker compose up -d db
+# Bound to 127.0.0.1 only. The default password is for this local container
+# only; production credentials come from the host's secret store, never here.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: alcancia-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: alcancia
+      POSTGRES_USER: alcancia
+      POSTGRES_PASSWORD: ${ALCANCIA_DB_PASSWORD:-alcancia_local_dev}
+    ports:
+      - "127.0.0.1:5440:5432"
+    volumes:
+      - alcancia-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alcancia -d alcancia"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  alcancia-db:
