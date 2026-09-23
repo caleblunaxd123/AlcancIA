@@ -8,7 +8,10 @@
     },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "alcancia",
+    "scheme": [
+      "alcancia",
+      "com.alcancia.app"
+    ],
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
@@ -35,6 +38,8 @@
       [
         "expo-splash-screen",
         {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
           "backgroundColor": "#F8FAFC",
           "resizeMode": "contain"
         }
