@@ -46,6 +46,13 @@ Entorno: el "Expo Go roto" era Metro con `--localhost` enlazado solo a IPv6 (`::
 7. Barra de estado imperativa (`useLightStatusBar`) para pantallas con cabecera oscura.
 Calidad: typecheck ✅ · lint ✅ · jest 148/148 ✅.
 
+### Google Sign-In verificado en dev build (2026-09-23)
+- Google Cloud: proyecto `alcancia-509504`, pantalla de consentimiento "AlcancIA" (External, modo Testing; solo usuarios de prueba), cliente Android `com.alcancia.app` + SHA-1 del debug keystore, custom URI scheme habilitado. El Client ID vive en `mobile/.env` (no versionado).
+- `app.json`: scheme `com.alcancia.app` (redirect `com.alcancia.app:/oauthredirect`) + imagen de splash (sin ella el prebuild fallaba por `splashscreen_logo`).
+- `app/+native-intent.tsx`: el router ignora el deep link `oauthredirect` (lo consume expo-auth-session); antes mostraba "Unmatched Route".
+- Verificado en emulador Medium_Phone_API_36.1: login → Google → cuenta nueva → onboarding ✅. (El Pixel_8_Pro no tiene espacio: 93% lleno.)
+- Pendiente: cliente Android de release (SHA-1 de producción), publicar la app OAuth, Facebook (falta Meta App ID), migrar a Google Sign-In nativo.
+
 ## Comandos importantes
 
 ```bash
