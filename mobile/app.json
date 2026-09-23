@@ -3,14 +3,13 @@
     "name": "AlcancIA",
     "slug": "alcancia",
     "version": "0.1.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "alcancia",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "backgroundColor": "#F8FAFC"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.alcancia.app"
@@ -32,6 +31,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-secure-store",
       [
         "expo-splash-screen",
         {

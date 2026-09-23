@@ -7,7 +7,7 @@
 - **React Native Reanimated 4** (+ worklets) para animaciones en UI thread.
 - **React Native Gesture Handler** para el slider y gestos.
 - **Zustand** para estado (`financialStore`, `appStore`).
-- **react-native-svg** para mascota y Casa Financiera.
+- **WebP + Reanimated** para ilustraciones temáticas y movimiento eficiente.
 - **Lucide** para iconografía (una sola familia).
 - **Plus Jakarta Sans** vía `@expo-google-fonts`.
 
@@ -33,7 +33,7 @@ mobile/
       financial/             # Money, Mascot, House, SafeToSpend, Goal, ...
       navigation/            # TabBar (botón central IA)
     features/                # hooks de pantalla (useHomeData)
-    store/                   # zustand
+    store/                   # zustand + adapter SecureStore cifrado
     data/                    # demo dataset (hogar peruano)
     types/                   # dominio + money
     constants/ utils/        # categorías, fechas, formato
@@ -48,15 +48,22 @@ mobile/
 - **Money en enteros.** Ver [FINANCIAL_ENGINE.md](FINANCIAL_ENGINE.md).
 - **Fechas locales.** Los strings `YYYY-MM-DD` se parsean como hora local para no
   correr el día en zonas con offset negativo (Perú UTC-5).
+- **Mutaciones atómicas.** Un aporte o pago actualiza saldo, entidad y movimiento
+  enlazado en una sola transición; eliminar ese movimiento revierte la operación.
+- **Recurrencias centralizadas.** Un único motor proyecta calendario, safe-to-spend,
+  Home y contexto de IA para evitar cálculos divergentes.
+- **IA acotada.** El backend recibe contexto financiero validado y sanitizado; la
+  matemática permanece determinística y el proveedor solo redacta la explicación.
 
 ## Calidad
 
 `npm run typecheck`, `npm run lint`, `npm test` pasan en verde. El bundle de Metro
 (`expo export`) compila la app completa sin errores.
 
-## Backend (planificado)
+## Backend
 
-.NET 9 Web API, Clean Architecture pragmática, EF Core + PostgreSQL, JWT + refresh
-tokens, FluentValidation, Serilog, OpenAPI, rate limiting, health checks. El motor
-financiero se reimplementa/valida en el servidor como fuente autoritativa. Ver
-[ROADMAP.md](ROADMAP.md).
+.NET 9 Web API con Clean Architecture pragmática, proveedor Gemini opcional,
+fallback local determinístico, OpenAPI, CORS restringido, rate limiting y health
+checks. Persistencia remota, identidad JWT y autorización por hogar continúan como
+trabajo de producción; hasta entonces la fuente de verdad financiera es local.
+Ver [ROADMAP.md](ROADMAP.md).

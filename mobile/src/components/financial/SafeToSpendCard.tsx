@@ -67,9 +67,29 @@ export function SafeToSpendCard({ result, onAskCanIBuy }: SafeToSpendCardProps) 
         </Pressable>
       </View>
 
-      <BottomSheet visible={showBreakdown} onClose={() => setShowBreakdown(false)} title="¿Cómo lo calculamos?">
+      <SafeToSpendBreakdownSheet visible={showBreakdown} onClose={() => setShowBreakdown(false)} result={result} />
+    </Card>
+  );
+}
+
+/**
+ * "¿Cómo lo calculamos?" — itemizes every line the deterministic engine used,
+ * so the user can always see why their safe-to-spend is what it is (§85).
+ */
+export function SafeToSpendBreakdownSheet({
+  visible,
+  onClose,
+  result,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  result: SafeToSpendResult;
+}) {
+  const theme = useTheme();
+  return (
+    <BottomSheet visible={visible} onClose={onClose} title="¿Cómo lo calculamos?">
         <Text variant="body" color="secondary" style={{ marginBottom: theme.spacing.sm }}>
-          Partimos de tu saldo y reservamos lo que ya tiene destino. Lo que queda es lo que puedes gastar con tranquilidad.
+          Partimos de tu saldo y apartamos lo que ya tiene destino (pagos, ahorro y un colchón). Lo que queda es lo que puedes gastar tranquilo.
         </Text>
         {result.breakdown.map((line, i) => (
           <Animated.View
@@ -107,12 +127,11 @@ export function SafeToSpendCard({ result, onAskCanIBuy }: SafeToSpendCardProps) 
             marginTop: theme.spacing.md,
           }}
         >
-          <Text variant="subtitle">Disponible</Text>
+          <Text variant="subtitle">Puedes gastar</Text>
           <Text variant="moneyMedium" color="positive">
             {formatMoney(result.amount)}
           </Text>
         </View>
-      </BottomSheet>
-    </Card>
+    </BottomSheet>
   );
 }

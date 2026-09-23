@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Icon } from '@/components/common/Icon';
+import { PageHeader } from '@/components/common/PageHeader';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
 import { Money } from '@/components/financial/Money';
@@ -24,6 +26,7 @@ const KIND_META: Record<CalendarEventKind, { icon: string; label: string }> = {
 
 export default function Calendar() {
   const theme = useTheme();
+  const router = useRouter();
   const snapshot = useFinancialStore((s) => s.snapshot);
   const currency = snapshot.currentBalance.currency;
 
@@ -52,7 +55,10 @@ export default function Calendar() {
 
   return (
     <Screen edges={{ top: true }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
+      <View style={{ padding: theme.spacing.xl }}><PageHeader title="Calendario de pagos" subtitle="Lo que entra y sale este mes, día por día" onBack={() => router.back()} /></View>
+
+      <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.lg }} showsVerticalScrollIndicator={false}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <Pressable onPress={() => move(-1)} accessibilityRole="button" accessibilityLabel="Mes anterior" hitSlop={10} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="chevron-left" size={26} color="secondary" />
         </Pressable>
@@ -61,8 +67,6 @@ export default function Calendar() {
           <Icon name="chevron-right" size={26} color="secondary" />
         </Pressable>
       </View>
-
-      <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.lg }} showsVerticalScrollIndicator={false}>
         <Card variant="highlight">
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ gap: theme.spacing.xxs }}>

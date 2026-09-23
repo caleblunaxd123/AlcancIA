@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { AlcanciaMascot, type MascotMood } from '@/components/financial/AlcanciaMascot';
@@ -13,6 +13,7 @@ import { Chip } from '@/components/common/Chip';
 import { Icon } from '@/components/common/Icon';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
+import { HeaderIconButton, PageHeader } from '@/components/common/PageHeader';
 import { fromMajor, toMajor } from '@/engine/money';
 import { simulatePurchase, type PurchaseVerdict } from '@/engine/purchase';
 import { useAppStore } from '@/store/appStore';
@@ -61,17 +62,8 @@ export default function CanIBuyIt() {
 
   return (
     <Screen edges={{ top: true, bottom: true }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.xl }}>
-        <Text variant="title">¿Puedo comprarlo?</Text>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar"
-          hitSlop={10}
-          style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface.primary }}
-        >
-          <Icon name="x" size={22} color="secondary" />
-        </Pressable>
+      <View style={{ padding: theme.spacing.xl }}>
+        <PageHeader title="¿Puedo comprarlo?" subtitle="Escribe el precio y mira el impacto antes de gastar" icon="scan-line" action={<HeaderIconButton icon="x" label="Cerrar" onPress={() => router.back()} />} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false}>

@@ -14,8 +14,14 @@ describe('buildMissions', () => {
   });
 
   it('counts goals that have already started', () => {
-    const mission = buildMissions(demoSnapshot).find((item) => item.id === 'goals-5');
+    const mission = buildMissions(demoSnapshot).find((item) => item.id.startsWith('goals-5'));
 
     expect(mission?.progress).toBe(3);
+  });
+
+  it('does not reward inactivity as a no-delivery success', () => {
+    const empty = { ...demoSnapshot, transactions: [] };
+    const mission = buildMissions(empty, new Date(2026, 8, 22)).find((item) => item.id.startsWith('intentional-7'));
+    expect(mission?.progress).toBe(0);
   });
 });

@@ -5,6 +5,7 @@
 import { calculateSafeToSpend, type SafeToSpendResult } from './safeToSpend';
 import type { FinancialSnapshot, WeatherState } from '@/types/domain';
 import { nextDayOfMonth, daysBetween } from '@/utils/date';
+import { nextOccurrence, recurrenceAnchor } from './recurrence';
 
 export type WeatherReason = {
   tone: 'positive' | 'attention';
@@ -52,10 +53,13 @@ export function deriveWeather(
 
   // Upcoming pressure: obligations due in the next 5 days.
   const soon = [
-    ...snapshot.debts.map((d) => ({ label: `${d.name}`, day: d.dueDay })),
-    ...snapshot.subscriptions.map((s) => ({ label: s.name, day: s.renewalDay })),
+    ...snapshot.debts.map((d) => ({ label: `${d.name}`, date: nextDayOfMonth(d.dueDay, asOf) })),
+    ...snapshot.subscriptions.map((s) => ({
+      label: s.name,
+      date: nextOccurrence({ frequency: s.frequency, anchorDate: s.nextRenewalDate ?? recurrenceAnchor(s.renewalDay, asOf) }, asOf),
+    })),
   ].filter((x) => {
-    const days = daysBetween(asOf, nextDayOfMonth(x.day, asOf));
+    const days = daysBetween(asOf, x.date);
     return days >= 0 && days <= 5;
   });
 
@@ -68,12 +72,12 @@ export function deriveWeather(
   }
   const goalsOnTrack = snapshot.goals.filter((g) => g.monthlyContribution.minor > 0);
   if (goalsOnTrack.length > 0) {
-    reasons.push({ tone: 'positive', text: 'Metas de ahorro al día' });
+    reasons.push({ tone: 'positive', text: 'Plan de aportes configurado' });
   }
 
   // Attention (soft, specific, never shaming — §3).
   for (const item of soon.slice(0, 2)) {
-    const days = daysBetween(asOf, nextDayOfMonth(item.day, asOf));
+    const days = daysBetween(asOf, item.date);
     reasons.push({
       tone: 'attention',
       text: `${item.label} vence en ${days === 0 ? 'hoy' : `${days} día${days === 1 ? '' : 's'}`}`,

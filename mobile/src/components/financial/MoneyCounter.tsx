@@ -21,7 +21,7 @@ export type MoneyCounterProps = {
   value: number;
   currency?: CurrencyCode;
   variant?: TypographyVariant;
-  color?: 'primary' | 'positive' | 'negative' | 'onBrand' | 'brand';
+  color?: 'primary' | 'positive' | 'negative' | 'onBrand' | 'brand' | 'hero';
   /** Duration override in ms. */
   duration?: number;
 };
@@ -32,6 +32,7 @@ const COLOR_TOKENS = {
   negative: 'money.negative',
   onBrand: 'text.onBrand',
   brand: 'brand.primary',
+  hero: 'hero.text',
 } as const;
 
 /**

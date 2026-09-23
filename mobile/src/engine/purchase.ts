@@ -45,6 +45,9 @@ export function simulatePurchase(
   costMinor: number,
   asOf: Date = new Date(),
 ): PurchaseSimulation {
+  if (!Number.isSafeInteger(costMinor) || costMinor <= 0) {
+    throw new RangeError('Purchase cost must be a positive integer amount');
+  }
   const currency = snapshot.currentBalance.currency;
   const cost = money(costMinor, currency);
   const sts = calculateSafeToSpend(snapshot, asOf);
@@ -54,15 +57,14 @@ export function simulatePurchase(
   const after = clampToZero(rawAfter);
   const wouldExceed = rawAfter.minor < 0;
 
-  // Model the purchase as pulling from this period's savings contribution,
-  // which delays the primary goal proportionally.
+  // Only the portion beyond Safe-to-Spend competes with money reserved for the
+  // primary goal. A purchase inside the margin must not claim to delay it.
   const primaryGoal = pickPrimaryGoal(snapshot.goals);
   let goalImpact: PurchaseSimulation['goalImpact'] = null;
-  if (primaryGoal && primaryGoal.monthlyContribution.minor > 0) {
-    // How many months of contribution this purchase consumes.
-    const monthsConsumed = cost.minor / primaryGoal.monthlyContribution.minor;
+  const savingsShortfall = Math.max(0, cost.minor - before.minor);
+  if (savingsShortfall > 0 && primaryGoal && primaryGoal.monthlyContribution.minor > 0) {
+    const monthsConsumed = savingsShortfall / primaryGoal.monthlyContribution.minor;
     const base = projectGoal(primaryGoal, asOf);
-    // Simulate a temporary reduction: contribute nothing extra, just delay.
     const delayedDays = Math.round(monthsConsumed * 30.44);
     if (base.etaDate) {
       goalImpact = { goal: primaryGoal, daysDelayed: delayedDays };

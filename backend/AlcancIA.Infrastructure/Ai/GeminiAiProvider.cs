@@ -56,8 +56,7 @@ public sealed class GeminiAiProvider(
             using var resp = await http.PostAsJsonAsync(path, body, ct);
             if (!resp.IsSuccessStatusCode)
             {
-                var detail = await resp.Content.ReadAsStringAsync(ct);
-                logger.LogWarning("Gemini returned {Status}: {Detail}", (int)resp.StatusCode, Truncate(detail));
+                logger.LogWarning("Gemini returned HTTP {Status}.", (int)resp.StatusCode);
                 return AiProviderResult.Fail($"HTTP {(int)resp.StatusCode}");
             }
 
@@ -103,5 +102,4 @@ public sealed class GeminiAiProvider(
         return null;
     }
 
-    private static string Truncate(string s) => s.Length > 300 ? s[..300] : s;
 }

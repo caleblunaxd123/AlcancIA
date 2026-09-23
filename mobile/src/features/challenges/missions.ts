@@ -1,5 +1,5 @@
 import type { FinancialSnapshot } from '@/types/domain';
-import { daysBetween, toISODate } from '@/utils/date';
+import { daysBetween, parseISO, toISODate } from '@/utils/date';
 
 export type MissionArtwork = 'growth' | 'focus' | 'community';
 
@@ -17,11 +17,12 @@ export type Mission = {
 
 const clamp = (value: number, target: number) => Math.max(0, Math.min(value, target));
 
-export function buildMissions(snapshot: FinancialSnapshot): Mission[] {
-  const today = new Date();
-  const distinctDays = new Set(snapshot.transactions.map((transaction) => transaction.date)).size;
+export function buildMissions(snapshot: FinancialSnapshot, asOf: Date = new Date()): Mission[] {
+  const today = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+  const period = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const loggedDays = new Set(snapshot.transactions.map((transaction) => transaction.date));
   const recent = snapshot.transactions.filter((transaction) => {
-    const distance = daysBetween(new Date(transaction.date), today);
+    const distance = daysBetween(parseISO(transaction.date), today);
     return distance >= 0 && distance <= 7;
   });
   const deliveryDays = new Set(
@@ -32,23 +33,30 @@ export function buildMissions(snapshot: FinancialSnapshot): Mission[] {
     day.setDate(day.getDate() - index);
     return toISODate(day);
   });
-  const intentionalDays = sevenDays.filter((day) => !deliveryDays.has(day)).length;
+  const intentionalDays = sevenDays.filter((day) => loggedDays.has(day) && !deliveryDays.has(day)).length;
+  let streak = 0;
+  let cursor = new Date(today);
+  if (!loggedDays.has(toISODate(cursor))) cursor.setDate(cursor.getDate() - 1);
+  while (loggedDays.has(toISODate(cursor)) && streak < 21) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
   const goalsWithProgress = snapshot.goals.filter((goal) => goal.saved.minor > 0).length;
 
   return [
     {
-      id: 'clarity-21',
+      id: `clarity-21-v2-${period}`,
       title: '21 días de claridad',
       subtitle: 'Registra un movimiento cada día',
-      progress: clamp(distinctDays, 21),
+      progress: clamp(streak, 21),
       target: 21,
-      progressLabel: `Día ${clamp(distinctDays, 21)} de 21`,
+      progressLabel: `Racha de ${clamp(streak, 21)} de 21 días`,
       reward: 80,
       artwork: 'growth',
       accent: 'mint',
     },
     {
-      id: 'intentional-7',
+      id: `intentional-7-v2-${period}`,
       title: '7 días con intención',
       subtitle: 'Una semana sin delivery',
       progress: clamp(intentionalDays, 7),
@@ -59,7 +67,7 @@ export function buildMissions(snapshot: FinancialSnapshot): Mission[] {
       accent: 'violet',
     },
     {
-      id: 'goals-5',
+      id: `goals-5-v2-${period}`,
       title: 'Haz crecer tus planes',
       subtitle: 'Avanza en 5 metas de ahorro',
       progress: clamp(goalsWithProgress, 5),

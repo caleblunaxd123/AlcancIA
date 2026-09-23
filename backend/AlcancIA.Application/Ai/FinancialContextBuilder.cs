@@ -20,13 +20,13 @@ public static class FinancialContextBuilder
         var bills = ctx.UpcomingBills
             .OrderBy(b => b.InDays)
             .Take(MaxBills)
-            .Select(b => new UpcomingBill(b.Label, Round(b.Amount), b.InDays))
+            .Select(b => new UpcomingBill(Clean(b.Label, 120), Round(b.Amount), b.InDays))
             .ToList();
 
         var goals = ctx.Goals
             .Take(MaxGoals)
             .Select(g => new GoalProgress(
-                g.Name,
+                Clean(g.Name, 120),
                 Round(g.Saved),
                 Round(g.Target),
                 g.Target > 0 ? (int)Math.Round(g.Saved / g.Target * 100m) : 0))
@@ -35,12 +35,12 @@ public static class FinancialContextBuilder
         var categories = ctx.CategorySummary
             .OrderByDescending(c => c.Amount)
             .Take(MaxCategories)
-            .Select(c => new CategorySpend(c.Category, Round(c.Amount)))
+            .Select(c => new CategorySpend(Clean(c.Category, 80), Round(c.Amount)))
             .ToList();
 
         return new FinancialContext
         {
-            Currency = string.IsNullOrWhiteSpace(ctx.Currency) ? "PEN" : ctx.Currency,
+            Currency = ctx.Currency is "PEN" or "USD" ? ctx.Currency : "PEN",
             SafeToSpend = Round(ctx.SafeToSpend),
             MonthlyIncome = Round(ctx.MonthlyIncome),
             UpcomingBills = bills,
@@ -51,4 +51,9 @@ public static class FinancialContextBuilder
     }
 
     private static decimal Round(decimal value) => Math.Round(value, 2);
+    private static string Clean(string value, int maxLength)
+    {
+        var clean = (value ?? string.Empty).Replace('\r', ' ').Replace('\n', ' ').Trim();
+        return clean.Length <= maxLength ? clean : clean[..maxLength].TrimEnd();
+    }
 }

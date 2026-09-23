@@ -61,4 +61,18 @@ public class AiChatEndpointTests(WebApplicationFactory<Program> factory)
         var resp = await client.PostAsJsonAsync("/api/ai/chat", new ChatRequest { Question = "" });
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
+
+    [Fact]
+    public async Task Chat_rejects_untrusted_financial_context()
+    {
+        var client = _factory.CreateClient();
+        var request = new ChatRequest
+        {
+            Question = "Analiza mis gastos",
+            Context = new ChatContext { Currency = "INVALID", SafeToSpend = -1m },
+        };
+
+        var resp = await client.PostAsJsonAsync("/api/ai/chat", request);
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
 }

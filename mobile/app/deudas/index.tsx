@@ -5,6 +5,7 @@ import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Icon } from '@/components/common/Icon';
+import { PageHeader } from '@/components/common/PageHeader';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
 import { Money } from '@/components/financial/Money';
@@ -102,12 +103,7 @@ export default function Debts() {
 function Header({ onBack, onAdd }: { onBack: () => void; onAdd: () => void }) {
   const theme = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
-      <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
-        <Icon name="chevron-left" size={26} color="secondary" />
-      </Pressable>
-      <Text variant="title" style={{ flex: 1 }}>Deudas</Text>
-      <Pressable
+    <View style={{ padding: theme.spacing.xl }}><PageHeader title="Mis deudas" subtitle="Cuánto debes y cuándo terminarás de pagar" onBack={onBack} action={<Pressable
         onPress={onAdd}
         accessibilityRole="button"
         accessibilityLabel="Agregar deuda"
@@ -115,7 +111,6 @@ function Header({ onBack, onAdd }: { onBack: () => void; onAdd: () => void }) {
         style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.brand.soft, borderWidth: 1, borderColor: theme.colors.border.active }}
       >
         <Icon name="plus" size={22} color="brand" />
-      </Pressable>
-    </View>
+      </Pressable>} /></View>
   );
 }

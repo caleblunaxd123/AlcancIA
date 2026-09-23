@@ -4,13 +4,14 @@ import { Pressable, SectionList, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Icon } from '@/components/common/Icon';
+import { PageHeader } from '@/components/common/PageHeader';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
 import { TransactionRow } from '@/components/financial/TransactionRow';
 import { formatMoney, sum } from '@/engine/money';
 import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
-import { formatDayMonth } from '@/utils/date';
+import { formatDayMonth, formatMonthYear, parseISO, toISODate } from '@/utils/date';
 
 function AddButton() {
   const theme = useTheme();
@@ -33,9 +34,14 @@ export default function Movimientos() {
   const router = useRouter();
   const snapshot = useFinancialStore((s) => s.snapshot);
   const txs = snapshot.transactions;
+  const now = new Date();
+  const periodTransactions = txs.filter((transaction) => {
+    const date = parseISO(transaction.date);
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+  });
 
-  const income = sum(txs.filter((t) => t.kind === 'income').map((t) => t.amount));
-  const expense = sum(txs.filter((t) => t.kind === 'expense').map((t) => t.amount));
+  const income = sum(periodTransactions.filter((t) => t.kind === 'income').map((t) => t.amount));
+  const expense = sum(periodTransactions.filter((t) => t.kind === 'expense').map((t) => t.amount));
 
   // Group by date for section headers.
   const grouped = txs.reduce<Record<string, typeof txs>>((acc, t) => {
@@ -69,11 +75,11 @@ export default function Movimientos() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={{ marginBottom: theme.spacing.lg }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.lg }}>
-              <Text variant="title">Movimientos</Text>
-              <AddButton />
-            </View>
+            <View style={{ marginBottom: theme.spacing.lg }}><PageHeader title="Movimientos" subtitle="Tus gastos e ingresos · toca + para registrar" icon="arrow-left-right" action={<AddButton />} /></View>
             <Card>
+              <Text variant="caption" color="muted" style={{ marginBottom: theme.spacing.md }}>
+                {formatMonthYear(toISODate(now))}
+              </Text>
               <View style={{ flexDirection: 'row' }}>
                 <View style={{ flex: 1, gap: theme.spacing.xxs }}>
                   <Text variant="label" color="muted">
@@ -114,9 +120,6 @@ export default function Movimientos() {
 function Header() {
   const theme = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.xl }}>
-      <Text variant="title">Movimientos</Text>
-      <AddButton />
-    </View>
+    <View style={{ padding: theme.spacing.xl }}><PageHeader title="Movimientos" subtitle="Aquí verás todo lo que gastas y recibes" icon="arrow-left-right" action={<AddButton />} /></View>
   );
 }

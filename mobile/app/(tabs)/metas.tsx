@@ -5,7 +5,7 @@ import { Button } from '@/components/common/Button';
 import { EmptyState } from '@/components/common/EmptyState';
 import { GoalCard } from '@/components/financial/GoalCard';
 import { Screen } from '@/components/common/Screen';
-import { Text } from '@/components/common/Text';
+import { PageHeader } from '@/components/common/PageHeader';
 import { formatMoney, sum } from '@/engine/money';
 import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
@@ -20,6 +20,7 @@ export default function Metas() {
   if (goals.length === 0) {
     return (
       <Screen>
+        <View style={{ padding: theme.spacing.xl }}><PageHeader title="Mis metas" subtitle="Ahorra para lo que quieres, paso a paso" icon="target" /></View>
         <EmptyState
           title="Tus sueños empiezan aquí ✨"
           body="Crea tu primera meta y AlcancIA te mostrará el camino para llegar."
@@ -34,14 +35,7 @@ export default function Metas() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingBottom: theme.spacing.huge, gap: theme.spacing.lg }} showsVerticalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <View>
-            <Text variant="title">Metas</Text>
-            <Text variant="caption" color="muted">
-              Ahorrado en total: {formatMoney(totalSaved, { hideDecimalsWhenRound: true })}
-            </Text>
-          </View>
-        </View>
+        <PageHeader title="Mis metas" subtitle={`${formatMoney(totalSaved, { hideDecimalsWhenRound: true })} ahorrados · toca una meta para aportar`} icon="target" />
 
         <View style={{ gap: theme.spacing.md }}>
           {goals.map((g) => (

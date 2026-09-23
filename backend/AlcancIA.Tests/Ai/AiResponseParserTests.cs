@@ -57,4 +57,17 @@ public class AiResponseParserTests
         Assert.NotNull(result);
         Assert.Equal(AiImpactLevel.Low, result!.ImpactLevel);
     }
+
+    [Fact]
+    public void Caps_model_generated_content_to_safe_ui_limits()
+    {
+        var longText = new string('x', 1000);
+        var items = string.Join(',', Enumerable.Range(0, 12).Select(_ => $"\"{longText}\""));
+        var result = AiResponseParser.TryParse($$"""{"summary":"{{longText}}","facts":[{{items}}]}""", "gemini");
+
+        Assert.NotNull(result);
+        Assert.Equal(800, result!.Summary.Length);
+        Assert.Equal(6, result.Facts.Count);
+        Assert.All(result.Facts, item => Assert.Equal(300, item.Length));
+    }
 }

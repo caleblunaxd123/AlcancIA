@@ -4,7 +4,8 @@ import { projectGoal } from '@/engine/goals';
 import { toMajor } from '@/engine/money';
 import { CATEGORIES } from '@/constants/categories';
 import type { FinancialSnapshot } from '@/types/domain';
-import { nextDayOfMonth, daysBetween } from '@/utils/date';
+import { nextDayOfMonth, daysBetween, parseISO } from '@/utils/date';
+import { nextOccurrence, recurrenceAnchor } from '@/engine/recurrence';
 
 export type AiImpactLevel = 'low' | 'medium' | 'high';
 
@@ -45,15 +46,25 @@ export function buildChatContext(snapshot: FinancialSnapshot) {
 
   const upcomingBills = [
     ...snapshot.debts.map((d) => ({ label: d.name, amount: d.minimumPayment, day: d.dueDay })),
-    ...snapshot.subscriptions.map((s) => ({ label: s.name, amount: s.amount, day: s.renewalDay })),
+    ...snapshot.subscriptions.map((s) => ({
+      label: s.name,
+      amount: s.amount,
+      date: nextOccurrence({ frequency: s.frequency, anchorDate: s.nextRenewalDate ?? recurrenceAnchor(s.renewalDay) }),
+    })),
   ]
-    .map((b) => ({ label: b.label, amount: toMajor(b.amount), inDays: daysBetween(new Date(), nextDayOfMonth(b.day)) }))
+    .map((bill) => ({
+      label: bill.label,
+      amount: toMajor(bill.amount),
+      inDays: daysBetween(new Date(), 'date' in bill ? bill.date : nextDayOfMonth(bill.day)),
+    }))
     .sort((a, b) => a.inDays - b.inDays)
     .slice(0, 5);
 
   const categoryTotals = new Map<string, number>();
+  const spendingWindowStart = new Date();
+  spendingWindowStart.setDate(spendingWindowStart.getDate() - 30);
   for (const t of snapshot.transactions) {
-    if (t.kind !== 'expense') continue;
+    if (t.kind !== 'expense' || parseISO(t.date) < spendingWindowStart) continue;
     categoryTotals.set(t.category, (categoryTotals.get(t.category) ?? 0) + t.amount.minor);
   }
   const categorySummary = [...categoryTotals.entries()]
@@ -88,9 +99,12 @@ export function buildChatContext(snapshot: FinancialSnapshot) {
 export async function askAlcancIA(
   question: string,
   snapshot: FinancialSnapshot,
+  signal?: AbortSignal,
 ): Promise<ChatResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+  const abort = () => controller.abort();
+  signal?.addEventListener('abort', abort, { once: true });
 
   try {
     const res = await fetch(`${API_BASE_URL}/api/ai/chat`, {
@@ -107,5 +121,6 @@ export async function askAlcancIA(
     return (await res.json()) as ChatResult;
   } finally {
     clearTimeout(timeout);
+    signal?.removeEventListener('abort', abort);
   }
 }

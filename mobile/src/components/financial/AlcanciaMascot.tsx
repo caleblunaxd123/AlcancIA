@@ -26,8 +26,8 @@ export type AlcanciaMascotProps = {
   animate?: boolean;
 };
 
-const heroMascot = require('../../../assets/branding/mascot-hero.png');
-const thinkingMascot = require('../../../assets/branding/mascot-thinking.png');
+const heroMascot = require('../../../assets/branding/mascot-hero.webp');
+const thinkingMascot = require('../../../assets/branding/mascot-thinking.webp');
 
 /**
  * Mood-based mascot facade. Generated 3D art powers the main states while
@@ -53,7 +53,7 @@ export function AlcanciaMascot({ mood = 'neutral', size = 120, animate = true }:
         withTiming(lift, { duration, easing: Easing.inOut(Easing.quad) }),
         withTiming(0, { duration, easing: Easing.inOut(Easing.quad) }),
       ),
-      -1,
+      mood === 'thinking' ? -1 : 3,
       false,
     );
     breathe.value = withRepeat(
@@ -61,7 +61,7 @@ export function AlcanciaMascot({ mood = 'neutral', size = 120, animate = true }:
         withTiming(mood === 'celebrating' ? 1.045 : 1.018, { duration, easing: Easing.inOut(Easing.quad) }),
         withTiming(1, { duration, easing: Easing.inOut(Easing.quad) }),
       ),
-      -1,
+      mood === 'thinking' ? -1 : 3,
       false,
     );
   }, [active, breathe, float, mood]);

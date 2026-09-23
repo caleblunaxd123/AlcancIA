@@ -16,6 +16,7 @@ import { TextField } from '@/components/common/TextField';
 import { demoSnapshot, demoUser } from '@/data/demo';
 import { buildSnapshotFromOnboarding, SUGGESTED_OBLIGATIONS } from '@/engine/onboarding';
 import { useAppStore } from '@/store/appStore';
+import { useAuthStore } from '@/store/authStore';
 import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
 import type { GoalKind } from '@/types/domain';
@@ -48,10 +49,12 @@ export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const completeOnboarding = useAppStore((s) => s.completeOnboarding);
+  const completeStep = useAppStore((s) => s.completeStep);
+  const accountName = useAuthStore((s) => s.account?.name ?? '');
   const setSnapshot = useFinancialStore((s) => s.setSnapshot);
 
   const [stepIndex, setStepIndex] = useState(0);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(accountName);
   const [household, setHousehold] = useState<HouseholdType>('solo');
   const [balance, setBalance] = useState('');
   const [income, setIncome] = useState('');
@@ -91,6 +94,7 @@ export default function Onboarding() {
     };
     setSnapshot(buildSnapshotFromOnboarding(answers));
     completeOnboarding('real', answers.name);
+    if (answers.goal) completeStep('goal');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     router.replace('/(tabs)');
   };

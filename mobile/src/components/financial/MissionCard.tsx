@@ -7,8 +7,8 @@ import { Text } from '@/components/common/Text';
 import type { Mission } from '@/features/challenges/missions';
 import { useTheme } from '@/theme';
 
-const challengeMascot = require('../../../assets/branding/mascot-challenge.png');
-const savingMascot = require('../../../assets/branding/mascot-saving.png');
+const challengeMascot = require('../../../assets/branding/mascot-challenge.webp');
+const savingMascot = require('../../../assets/branding/mascot-saving.webp');
 
 const DARK_GRADIENTS: Record<Mission['accent'], [string, string]> = {
   mint: ['rgba(25,102,91,0.72)', 'rgba(18,46,74,0.94)'],

@@ -14,27 +14,27 @@ import { useTheme } from '@/theme';
 import type { GoalKind } from '@/types/domain';
 
 const DARK_COVERS: Record<GoalKind, number> = {
-  home: require('../../../assets/branding/goal-home-cover.png'),
-  travel: require('../../../assets/branding/goal-travel-cover.png'),
-  car: require('../../../assets/branding/goal-car-cover.png'),
-  education: require('../../../assets/branding/goal-education-cover.png'),
-  emergency: require('../../../assets/branding/goal-emergency-cover.png'),
-  wedding: require('../../../assets/branding/goal-wedding-cover.png'),
-  tech: require('../../../assets/branding/goal-tech-cover.png'),
-  pet: require('../../../assets/branding/goal-pet-cover.png'),
-  custom: require('../../../assets/branding/goal-custom-cover.png'),
+  home: require('../../../assets/branding/goal-home-cover.webp'),
+  travel: require('../../../assets/branding/goal-travel-cover.webp'),
+  car: require('../../../assets/branding/goal-car-cover.webp'),
+  education: require('../../../assets/branding/goal-education-cover.webp'),
+  emergency: require('../../../assets/branding/goal-emergency-cover.webp'),
+  wedding: require('../../../assets/branding/goal-wedding-cover.webp'),
+  tech: require('../../../assets/branding/goal-tech-cover.webp'),
+  pet: require('../../../assets/branding/goal-pet-cover.webp'),
+  custom: require('../../../assets/branding/goal-custom-cover.webp'),
 };
 
 const LIGHT_COVERS: Record<GoalKind, number> = {
-  home: require('../../../assets/branding/goal-home-cover-light.png'),
-  travel: require('../../../assets/branding/goal-travel-cover-light.png'),
-  car: require('../../../assets/branding/goal-car-cover-light.png'),
-  education: require('../../../assets/branding/goal-education-cover-light.png'),
-  emergency: require('../../../assets/branding/goal-emergency-cover-light.png'),
-  wedding: require('../../../assets/branding/goal-wedding-cover-light.png'),
-  tech: require('../../../assets/branding/goal-tech-cover-light.png'),
-  pet: require('../../../assets/branding/goal-pet-cover-light.png'),
-  custom: require('../../../assets/branding/goal-custom-cover-light.png'),
+  home: require('../../../assets/branding/goal-home-cover-light.webp'),
+  travel: require('../../../assets/branding/goal-travel-cover-light.webp'),
+  car: require('../../../assets/branding/goal-car-cover-light.webp'),
+  education: require('../../../assets/branding/goal-education-cover-light.webp'),
+  emergency: require('../../../assets/branding/goal-emergency-cover-light.webp'),
+  wedding: require('../../../assets/branding/goal-wedding-cover-light.webp'),
+  tech: require('../../../assets/branding/goal-tech-cover-light.webp'),
+  pet: require('../../../assets/branding/goal-pet-cover-light.webp'),
+  custom: require('../../../assets/branding/goal-custom-cover-light.webp'),
 };
 
 const LABELS: Record<GoalKind, string> = {
@@ -72,7 +72,7 @@ export function GoalCover({ kind, height = 128, progress = 0 }: { kind: GoalKind
         withTiming(5, { duration: 4200, easing: Easing.inOut(Easing.quad) }),
         withTiming(-5, { duration: 4200, easing: Easing.inOut(Easing.quad) }),
       ),
-      -1,
+      2,
       true,
     );
   }, [drift, reveal, theme.easing.decelerate, theme.motion.slow, theme.reducedMotion]);

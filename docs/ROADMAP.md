@@ -8,24 +8,27 @@ Estado: ✅ hecho · 🚧 en progreso · ⬜ pendiente
 - ✅ Navegación base con botón central IA
 - ✅ Onboarding real que captura datos del usuario (§26) + "explorar con ejemplo"
 - ✅ Primer uso guiado: tarjeta "Primeros pasos" en Home (§33)
-- ✅ Persistencia local (AsyncStorage) — los datos sobreviven reinicios
-- ⬜ Auth real (pendiente backend)
+- ✅ Persistencia financiera cifrada en Keychain/Keystore (SecureStore), con migración local
+- ✅ Cuenta local segura: registro, login, logout y recuperación en dispositivo
+- ⬜ Auth remota verificable (correo/OAuth), sesiones de servidor y sincronización
 
 ## Fase 2 — Dinero ✅ (núcleo) / 🚧
 - ✅ Financial Engine + Safe To Spend (determinístico, testeado)
 - ✅ Home interactivo personalizado con los datos del usuario
 - ✅ Movimientos (lista, resumen, secciones)
-- ✅ CRUD de movimientos: crear (form con categorías), ver detalle, eliminar
+- ✅ Movimientos: crear, ver, editar con recálculo de saldo y eliminar/revertir
 - 🚧 Registro por texto / voz / escaneo (manual listo; NLP en Fase 5)
-- ⬜ Recurrentes y presupuestos editables
+- ✅ Proyección de recurrencias semanales, quincenales, mensuales y anuales
+- ✅ Edición segura de movimientos, metas, deudas y suscripciones
+- ⬜ Presupuestos configurables por categoría
 
 ## Fase 3 — Metas y compromisos 🚧
 - ✅ Metas (lista + detalle con journey)
 - ✅ CRUD de metas: crear, aportar, eliminar
 - ✅ Escenario "aporte extra" en vivo
-- ⬜ Calendario financiero
-- ⬜ Deudas (camino para salir de deuda)
-- ⬜ Suscripciones (mensual → anual)
+- ✅ Calendario financiero con recurrencias proyectadas
+- ✅ Deudas con pagos validados, saldo enlazado y reversión
+- ✅ Suscripciones con frecuencia y próxima renovación
 
 ## Fase 4 — Simulación ✅ (hero) / 🚧
 - ✅ ¿Puedo comprarlo? con simulación en vivo
@@ -39,7 +42,7 @@ Estado: ✅ hecho · 🚧 en progreso · ⬜ pendiente
 - ✅ `FinancialContextBuilder` (contexto mínimo, nunca toda la BD)
 - ✅ Contrato JSON validado + fallback determinístico (§68/§69)
 - ✅ Prompt-injection safe (§67) — datos delimitados, sanitizados, con tests
-- ✅ `POST /api/ai/chat` + `/health`, rate limiting, OpenAPI, CORS; 29 tests
+- ✅ `POST /api/ai/chat` + `/health`, límites de payload/respuesta, rate limiting, OpenAPI, CORS; 31 tests
 - ✅ App conectada: tab AlcancIA llama al backend con fallback on-device
 - ⬜ Gemini en vivo con API key real (hoy corre determinístico sin key)
 - ⬜ Extracción de comprobantes (Yape/Plin/boletas) con confirmación
@@ -54,14 +57,17 @@ Estado: ✅ hecho · 🚧 en progreso · ⬜ pendiente
 ## Fase 7 — Gamificación 🚧
 - 🚧 Casa Financiera viva
 - 🚧 Clima Financiero
-- ⬜ Misiones y progresión (semillas), racha semanal
+- ✅ Misiones y progresión (semillas), rachas consecutivas y estados mensuales
 - ⬜ Resumen semanal estilo story
 
-## Fase 8 — Hardening ⬜
-- ✅ Tests del motor (22)
+## Fase 8 — Hardening 🚧
+- ✅ 94 tests mobile + 31 tests backend
+- ✅ Expo Doctor 21/21, export Android, assets WebP optimizados
+- ✅ Validaciones de entrada, almacenamiento seguro y contexto de IA sanitizado
 - ⬜ Tests de componentes (RNTL) y E2E (Maestro)
 - ⬜ Backend + tests de integración (Testcontainers)
-- ⬜ Seguridad (OWASP API Top 10), performance, offline-first, widgets nativos
+- 🚧 Seguridad OWASP, performance y offline-first
+- ⬜ Auth/autorización, observabilidad, pentest y widgets nativos
 
 ## Monetización (feature flags)
 Free / Plus / Family. No bloquear datos esenciales tras premium.

@@ -1,10 +1,11 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Icon } from '@/components/common/Icon';
+import { HeaderIconButton, PageHeader } from '@/components/common/PageHeader';
 import { Money } from '@/components/financial/Money';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
@@ -38,6 +39,7 @@ export default function TransactionDetail() {
 
   const cat = CATEGORIES[transaction.category];
   const isIncome = transaction.kind === 'income';
+  const editable = (transaction.operation ?? 'manual') === 'manual';
 
   const confirmDelete = () => {
     Alert.alert('Eliminar movimiento', '¿Seguro que quieres eliminar este movimiento? Se ajustará tu saldo.', [
@@ -56,11 +58,23 @@ export default function TransactionDetail() {
 
   return (
     <Screen edges={{ top: true }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
-          <Icon name="chevron-left" size={26} color="secondary" />
-        </Pressable>
-        <Text variant="subtitle" style={{ flex: 1 }}>Detalle</Text>
+      <View style={{ padding: theme.spacing.xl, paddingBottom: theme.spacing.lg }}>
+        <PageHeader
+          eyebrow={isIncome ? 'Ingreso' : 'Gasto'}
+          title="Detalle del movimiento"
+          subtitle={cat.label}
+          onBack={() => router.back()}
+          action={
+            editable ? (
+              <HeaderIconButton
+                icon="pencil"
+                label="Editar movimiento"
+                color="brand"
+                onPress={() => router.push({ pathname: '/movimiento/nuevo', params: { id: transaction.id } })}
+              />
+            ) : undefined
+          }
+        />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }}>
@@ -78,7 +92,10 @@ export default function TransactionDetail() {
           <Row label="Origen" value={SOURCE_LABEL[transaction.source ?? 'manual'] ?? 'Manual'} last />
         </Card>
 
-        <Button label="Eliminar movimiento" variant="secondary" icon="trash-2" fullWidth onPress={confirmDelete} />
+        {editable ? <Button label="Editar movimiento" variant="secondary" icon="pencil" fullWidth onPress={() => router.push({ pathname: '/movimiento/nuevo', params: { id: transaction.id } })} /> : (
+          <Card variant="insight"><Text variant="caption" color="secondary">Este movimiento está enlazado a una meta o deuda. Para mantener los saldos consistentes puedes revertirlo eliminándolo.</Text></Card>
+        )}
+        <Button label="Eliminar movimiento" variant="ghost" icon="trash-2" fullWidth onPress={confirmDelete} />
       </ScrollView>
     </Screen>
   );

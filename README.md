@@ -13,33 +13,50 @@ La mayoría de apps responden *¿cuánto gasté?*. AlcancIA responde *¿cómo es
 
 ## Estado actual
 
-Este repositorio contiene la **primera vertical slice funcional** del producto:
-la identidad visual, el motor financiero determinístico y las experiencias hero.
+Este repositorio contiene una **vertical slice funcional y ejecutable** del producto:
+identidad visual, operaciones financieras locales, recurrencias, misiones y asistente
+con backend opcional.
 
 ### Implementado
 
-- **Design System AlcancIA** — tokens de color (navy / violeta / mint), tipografía
-  (Plus Jakarta Sans), spacing, radios, motion y springs. Dark mode como look hero
-  + light mode cálido real. Nada hardcodeado en componentes.
-- **Financial Engine** (determinístico, testeado — 22 tests):
+- **Design System AlcancIA** — modo claro cálido, tipografía Plus Jakarta Sans,
+  superficies accesibles, motion reducido cuando el sistema lo solicita y assets
+  WebP optimizados. Cada tipo de meta tiene una ilustración propia.
+- **Financial Engine** (determinístico y testeado):
   - `safeToSpend` — *Dinero seguro para gastar*, con desglose explicable ("¿Cómo lo
     calculamos?").
   - `weather` — *Clima Financiero* (nunca alarmista).
   - `goals` — proyección de metas y escenarios "con aporte extra".
   - `purchase` — simulador *¿Puedo comprarlo?* (informa, nunca ordena).
-  - `insights` — hallazgos cálidos y específicos.
+  - `insights` — hallazgos cálidos, específicos y basados en ventanas temporales.
+  - `recurrence` — proyección semanal, quincenal, mensual y anual con manejo de fin de mes.
   - `money` — aritmética en céntimos enteros (nunca floats).
-- **Pantallas**: Onboarding animado, Home (hero), ¿Puedo comprarlo?, Detalle de
-  Meta con slider en vivo, Movimientos, AlcancIA (asistente), Metas, Familia, y una
+- **Pantallas**: onboarding, Home, ¿Puedo comprarlo?, metas y aportes, movimientos,
+  calendario, deudas, suscripciones, misiones, asistente, Familia (preview) y la
   galería interna `/dev/design-system`.
 - **Componentes**: mascota AlcancIA (SVG, 6 moods), Casa Financiera viva, contadores
   de dinero animados, progreso animado, slider gestual, bottom sheets, y más.
-- **Accesibilidad**: reduced-motion, roles/labels, touch targets ≥44px, contraste.
+- **Integridad local**: aportes y pagos son operaciones atómicas, validan saldo y
+  crean movimientos reversibles enlazados. Los datos financieros se guardan en
+  Keychain/Keystore mediante SecureStore (con migración desde AsyncStorage).
+- **Accesibilidad**: reduced-motion, roles/labels, estados de error, modales
+  semánticos, sliders operables y touch targets ≥44px.
+- **Cuenta local segura**: registro manual, login, cierre de sesión conservando datos
+  y recuperación mediante respuesta protegida. Contraseñas y respuestas se guardan
+  únicamente como hashes con sales aleatorias dentro de Keychain/Keystore.
+- **Perfil y acceso**: nombre/correo editables y cambio de contraseña con verificación
+  de la contraseña actual.
+- **Edición segura**: movimientos manuales, metas, deudas y suscripciones pueden
+  actualizarse sin perder progreso ni desbalancear el saldo. Operaciones enlazadas
+  permanecen protegidas.
+- **Calidad verificada**: 94 pruebas mobile y 31 pruebas backend, TypeScript strict,
+  lint, Expo Doctor (21/21) y export Android exitoso.
 
-### Aún no (con roadmap documentado)
+### Pendiente para producción
 
-Backend .NET, IA conversacional real (Gemini), OCR de comprobantes, hogares
-compartidos con permisos, gamificación completa. Ver [docs/ROADMAP.md](docs/ROADMAP.md).
+Autenticación remota e identidad verificada, sincronización multi-dispositivo, hogares compartidos
+con autorización de servidor, OCR de comprobantes, telemetría/crash reporting y
+credenciales reales del proveedor de IA. Ver [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
@@ -74,7 +91,8 @@ npx expo start
 ```
 
 Escanea el QR con Expo Go. La app arranca con **datos demo** (hogar peruano
-realista), así que todo es explorable sin registrarte.
+realista), así que todo es explorable sin registrarte. En Android Emulator también
+puedes usar `adb reverse tcp:8081 tcp:8081` y abrir la URL de Expo.
 
 ## Scripts
 
@@ -82,7 +100,7 @@ realista), así que todo es explorable sin registrarte.
 cd mobile
 npm run typecheck   # tsc --noEmit (strict)
 npm run lint        # eslint
-npm test            # jest — motor financiero
+npm test            # jest — motor, stores, misiones y servicios
 ```
 
 ## Documentación

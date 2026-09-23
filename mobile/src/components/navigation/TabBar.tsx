@@ -13,7 +13,7 @@ const ICONS: Record<string, string> = {
   movimientos: 'arrow-left-right',
   ia: 'sparkles',
   metas: 'target',
-  familia: 'users',
+  familia: 'split',
 };
 
 const LABELS: Record<string, string> = {
@@ -21,7 +21,7 @@ const LABELS: Record<string, string> = {
   movimientos: 'Movimientos',
   ia: 'AlcancIA',
   metas: 'Metas',
-  familia: 'Familia',
+  familia: 'Compartidos',
 };
 
 /**
@@ -50,7 +50,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.background.secondary,
+        backgroundColor: theme.colors.surface.primary,
         borderTopWidth: 1,
         borderTopColor: theme.colors.border.subtle,
         paddingBottom: insets.bottom || theme.spacing.sm,
@@ -110,7 +110,7 @@ function CenterButton({ focused, onPress }: { focused: boolean; onPress: () => v
           style={{ marginTop: -22 }}
         >
           <LinearGradient
-            colors={theme.scheme === 'light' ? [theme.colors.brand.accent, '#A78BFA'] : [theme.colors.brand.primary, theme.colors.brand.secondary]}
+            colors={[theme.colors.hero.from, theme.colors.hero.to]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[
@@ -121,15 +121,18 @@ function CenterButton({ focused, onPress }: { focused: boolean; onPress: () => v
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderWidth: 4,
-                borderColor: theme.colors.background.secondary,
+                borderColor: theme.colors.surface.primary,
               },
               theme.elevation.md,
             ]}
           >
-            <Icon name="sparkles" size={26} color="onBrand" />
+            <Icon name="sparkles" size={26} rawColor={theme.colors.hero.text} />
           </LinearGradient>
         </Pressable>
       </Animated.View>
+      <Text variant="caption" color={focused ? 'brand' : 'muted'} style={{ fontSize: 11, marginTop: 2 }}>
+        Asistente
+      </Text>
     </View>
   );
 }

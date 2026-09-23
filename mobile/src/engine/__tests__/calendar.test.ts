@@ -23,11 +23,11 @@ const snapshot: FinancialSnapshot = {
 };
 
 describe('eventsForMonth', () => {
-  it('includes income only in its own month', () => {
+  it('projects recurring income into future months', () => {
     const september = eventsForMonth(snapshot, 2026, 8);
     expect(september.some((e) => e.kind === 'income' && e.day === 30)).toBe(true);
     const october = eventsForMonth(snapshot, 2026, 9);
-    expect(october.some((e) => e.kind === 'income')).toBe(false);
+    expect(october.some((e) => e.kind === 'income' && e.day === 30)).toBe(true);
   });
 
   it('repeats recurring bills every month', () => {

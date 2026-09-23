@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 
 import { Text } from './Text';
@@ -10,16 +10,21 @@ export type TextFieldProps = TextInputProps & {
   prefix?: string;
   /** Suffix shown inside the field, e.g. "%". */
   suffix?: string;
+  helperText?: string;
+  error?: string;
 };
 
-export function TextField({ label, prefix, suffix, style, ...rest }: TextFieldProps) {
+export function TextField({ label, prefix, suffix, helperText, error, style, onFocus, onBlur, accessibilityHint, ...rest }: TextFieldProps) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
+  const generatedId = useId().replace(/:/g, '');
+  const labelId = `label-${generatedId}`;
+  const helpId = `help-${generatedId}`;
 
   return (
     <View style={{ gap: theme.spacing.sm }}>
       {label ? (
-        <Text variant="label" color="muted">
+        <Text nativeID={labelId} variant="label" color={error ? 'warning' : 'muted'}>
           {label}
         </Text>
       ) : null}
@@ -30,7 +35,7 @@ export function TextField({ label, prefix, suffix, style, ...rest }: TextFieldPr
           gap: theme.spacing.sm,
           borderRadius: theme.radius.lg,
           borderWidth: 1,
-          borderColor: focused ? theme.colors.brand.primary : theme.colors.border.subtle,
+          borderColor: error ? theme.colors.status.warning : focused ? theme.colors.brand.primary : theme.colors.border.subtle,
           backgroundColor: theme.colors.surface.primary,
           paddingHorizontal: theme.spacing.lg,
           minHeight: 54,
@@ -43,8 +48,11 @@ export function TextField({ label, prefix, suffix, style, ...rest }: TextFieldPr
         ) : null}
         <TextInput
           placeholderTextColor={theme.colors.text.muted}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          accessibilityLabel={rest.accessibilityLabel ?? label}
+          accessibilityLabelledBy={label ? labelId : undefined}
+          accessibilityHint={error ?? helperText ?? accessibilityHint}
+          onFocus={(event) => { setFocused(true); onFocus?.(event); }}
+          onBlur={(event) => { setFocused(false); onBlur?.(event); }}
           style={[
             {
               flex: 1,
@@ -63,6 +71,16 @@ export function TextField({ label, prefix, suffix, style, ...rest }: TextFieldPr
           </Text>
         ) : null}
       </View>
+      {error || helperText ? (
+        <Text
+          nativeID={helpId}
+          variant="caption"
+          color={error ? 'warning' : 'muted'}
+          accessibilityLiveRegion={error ? 'polite' : 'none'}
+        >
+          {error ?? helperText}
+        </Text>
+      ) : null}
     </View>
   );
 }

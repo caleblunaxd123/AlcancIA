@@ -4,7 +4,7 @@
  */
 import type { FinancialSnapshot } from '@/types/domain';
 import type { Money } from '@/types/money';
-import { parseISO } from '@/utils/date';
+import { occurrencesBetween, recurrenceAnchor } from '@/engine/recurrence';
 
 export type CalendarEventKind = 'income' | 'bill' | 'debt' | 'subscription';
 
@@ -27,22 +27,33 @@ export function eventsForMonth(
   month: number,
 ): CalendarEvent[] {
   const events: CalendarEvent[] = [];
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0);
+
+  const addOccurrences = (
+    frequency: import('@/types/domain').Frequency,
+    anchorDate: string,
+    event: Omit<CalendarEvent, 'day'>,
+  ) => {
+    for (const occurrence of occurrencesBetween({ frequency, anchorDate }, start, end)) {
+      events.push({ ...event, day: occurrence.getDate() });
+    }
+  };
 
   for (const inc of snapshot.income) {
-    const d = parseISO(inc.nextDate);
-    // Income carries a concrete date, so it only belongs to its own month.
-    if (d.getFullYear() !== year || d.getMonth() !== month) continue;
-    events.push({ day: d.getDate(), label: inc.description, amount: inc.amount, kind: 'income' });
+    addOccurrences(inc.frequency, inc.nextDate, { label: inc.description, amount: inc.amount, kind: 'income' });
   }
   for (const r of snapshot.recurring) {
     if (r.kind !== 'expense' || !r.dayOfMonth) continue;
-    events.push({ day: clampDay(r.dayOfMonth, year, month), label: r.description, amount: r.amount, kind: 'bill' });
+    const anchor = r.nextDate ?? recurrenceAnchor(r.dayOfMonth, start);
+    addOccurrences(r.frequency, anchor, { label: r.description, amount: r.amount, kind: 'bill' });
   }
   for (const d of snapshot.debts) {
     events.push({ day: clampDay(d.dueDay, year, month), label: `${d.name} (cuota)`, amount: d.minimumPayment, kind: 'debt' });
   }
   for (const s of snapshot.subscriptions) {
-    events.push({ day: clampDay(s.renewalDay, year, month), label: s.name, amount: s.amount, kind: 'subscription' });
+    const anchor = s.nextRenewalDate ?? recurrenceAnchor(s.renewalDay, start);
+    addOccurrences(s.frequency, anchor, { label: s.name, amount: s.amount, kind: 'subscription' });
   }
 
   return events.sort((a, b) => a.day - b.day);

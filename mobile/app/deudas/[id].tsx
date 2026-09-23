@@ -1,12 +1,13 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Icon } from '@/components/common/Icon';
+import { HeaderIconButton, PageHeader } from '@/components/common/PageHeader';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
 import { TextField } from '@/components/common/TextField';
@@ -32,6 +33,7 @@ export default function DebtDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const debt = useFinancialStore((s) => s.snapshot.debts.find((d) => d.id === id));
+  const currentBalance = useFinancialStore((s) => s.snapshot.currentBalance);
   const payDebt = useFinancialStore((s) => s.payDebt);
   const deleteDebt = useFinancialStore((s) => s.deleteDebt);
 
@@ -57,7 +59,7 @@ export default function DebtDetail() {
 
   const sliderMax = Math.max(200, Math.ceil(toMajor(debt.minimumPayment)) * 2);
   const paymentValue = parseFloat(payment.replace(',', '.')) || 0;
-  const canPay = paymentValue > 0 && paymentValue <= toMajor(debt.balance);
+  const canPay = paymentValue > 0 && paymentValue <= toMajor(debt.balance) && paymentValue <= toMajor(currentBalance);
 
   const confirmDelete = () => {
     Alert.alert('Eliminar deuda', `¿Eliminar ${debt.name}? Tu historial de pagos no se conserva.`, [
@@ -75,21 +77,29 @@ export default function DebtDetail() {
 
   const onPay = () => {
     if (!canPay) return;
-    payDebt(debt.id, Math.round(paymentValue * 100));
+    const result = payDebt(debt.id, Math.round(paymentValue * 100));
+    if (!result.ok) {
+      Alert.alert('No se pudo registrar', result.error);
+      return;
+    }
     setPayment('');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   };
 
   return (
     <Screen edges={{ top: true }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
-          <Icon name="chevron-left" size={26} color="secondary" />
-        </Pressable>
-        <Text variant="subtitle" style={{ flex: 1 }}>{debt.name}</Text>
-        <Pressable onPress={confirmDelete} accessibilityRole="button" accessibilityLabel="Eliminar deuda" hitSlop={10} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="trash-2" size={22} color="muted" />
-        </Pressable>
+      <View style={{ padding: theme.spacing.xl, paddingBottom: theme.spacing.lg }}>
+        <PageHeader
+          eyebrow="Deuda"
+          title={debt.name}
+          onBack={() => router.back()}
+          action={
+            <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+              <HeaderIconButton icon="pencil" label="Editar deuda" color="brand" onPress={() => router.push({ pathname: '/deudas/nueva', params: { id: debt.id } })} />
+              <HeaderIconButton icon="trash-2" label="Eliminar deuda" onPress={confirmDelete} />
+            </View>
+          }
+        />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -181,6 +191,11 @@ export default function DebtDetail() {
           {paymentValue > toMajor(debt.balance) ? (
             <Text variant="caption" color="warning" style={{ marginTop: theme.spacing.sm }}>
               El pago no puede ser mayor al saldo pendiente.
+            </Text>
+          ) : null}
+          {paymentValue > toMajor(currentBalance) ? (
+            <Text variant="caption" color="warning" style={{ marginTop: theme.spacing.sm }}>
+              Tu saldo disponible es {formatMoney(currentBalance)}.
             </Text>
           ) : null}
         </Card>

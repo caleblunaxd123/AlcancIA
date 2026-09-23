@@ -5,8 +5,11 @@ import { Card } from '@/components/common/Card';
 import { Icon } from '@/components/common/Icon';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
+import { PageHeader } from '@/components/common/PageHeader';
 import { useAppStore } from '@/store/appStore';
+import { useAuthStore } from '@/store/authStore';
 import { useFinancialStore } from '@/store/financialStore';
+import { useSharedStore } from '@/store/sharedStore';
 import { useTheme, useThemePreference } from '@/theme';
 
 export default function Mas() {
@@ -18,6 +21,9 @@ export default function Mas() {
   const setHaptics = useAppStore((s) => s.setHaptics);
   const resetOnboarding = useAppStore((s) => s.resetOnboarding);
   const resetData = useFinancialStore((s) => s.reset);
+  const resetShared = useSharedStore((s) => s.reset);
+  const account = useAuthStore((s) => s.account);
+  const logout = useAuthStore((s) => s.logout);
 
   const modules: { label: string; icon: string; href: string; sub: string }[] = [
     { label: 'Misiones', icon: 'trophy', href: '/retos', sub: 'Hábitos pequeños, progreso real' },
@@ -34,6 +40,7 @@ export default function Mas() {
         style: 'destructive',
         onPress: () => {
           resetData();
+          resetShared();
           resetOnboarding();
           router.replace('/onboarding');
         },
@@ -41,27 +48,32 @@ export default function Mas() {
     ]);
   };
 
+  const confirmLogout = () => {
+    Alert.alert('Cerrar sesión', 'Tus datos permanecerán guardados de forma segura en este dispositivo.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Cerrar sesión', onPress: () => { logout(); router.replace('/auth/login'); } },
+    ]);
+  };
+
   return (
     <Screen edges={{ top: true }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
-          <Icon name="chevron-left" size={26} color="secondary" />
-        </Pressable>
-        <Text variant="subtitle" style={{ flex: 1 }}>Más</Text>
-      </View>
+      <View style={{ padding: theme.spacing.xl }}><PageHeader title="Mi cuenta" subtitle="Perfil, herramientas y preferencias" onBack={() => router.back()} /></View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false}>
-        <Card>
+        <Pressable onPress={() => router.push('/cuenta/perfil')} accessibilityRole="button" accessibilityLabel="Editar perfil y seguridad">
+        <Card variant="interactive">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
             <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: theme.colors.brand.soft, alignItems: 'center', justifyContent: 'center' }}>
               <Text variant="subtitle" color="brand">{(name || 'A').charAt(0).toUpperCase()}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="subtitle">{name || 'Tu perfil'}</Text>
-              <Text variant="caption" color="muted">AlcancIA</Text>
+              <Text variant="caption" color="muted">{account?.email ?? 'Cuenta local de AlcancIA'}</Text>
             </View>
+            <Icon name="chevron-right" size={20} color="muted" />
           </View>
         </Card>
+        </Pressable>
 
         <View style={{ gap: theme.spacing.md }}>
           {modules.map((m) => (
@@ -88,6 +100,11 @@ export default function Mas() {
           <SettingRow icon="vibrate" label="Vibración" value={haptics} onChange={setHaptics} last />
         </Card>
 
+        <Pressable onPress={confirmLogout} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, justifyContent: 'center', minHeight: 48 }}>
+          <Icon name="log-out" size={18} color="secondary" />
+          <Text variant="bodyStrong" color="secondary">Cerrar sesión</Text>
+        </Pressable>
+
         <Pressable onPress={confirmReset} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, justifyContent: 'center', paddingVertical: theme.spacing.md }}>
           <Icon name="rotate-ccw" size={16} color="negative" />
           <Text variant="bodyStrong" color="negative">Reiniciar AlcancIA</Text>
@@ -107,7 +124,7 @@ function SettingRow({ icon, label, value, onChange, last }: { icon: string; labe
         value={value}
         onValueChange={onChange}
         trackColor={{ true: theme.colors.brand.primary, false: theme.colors.surface.interactive }}
-        thumbColor={theme.colors.text.onBrand}
+        thumbColor={theme.colors.hero.text}
       />
     </View>
   );

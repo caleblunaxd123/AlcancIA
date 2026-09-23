@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { AlcanciaMascot, type MascotMood } from '@/components/financial/AlcanciaMascot';
@@ -10,11 +10,14 @@ import { MoneyCounter } from '@/components/financial/MoneyCounter';
 import { ScenarioSlider } from '@/components/financial/ScenarioSlider';
 import { GoalCover } from '@/components/financial/GoalCover';
 import { Button } from '@/components/common/Button';
+import { BottomSheet } from '@/components/common/BottomSheet';
 import { Card } from '@/components/common/Card';
 import { Icon } from '@/components/common/Icon';
+import { HeaderIconButton, PageHeader } from '@/components/common/PageHeader';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
-import { toMajor } from '@/engine/money';
+import { TextField } from '@/components/common/TextField';
+import { formatMoney, toMajor } from '@/engine/money';
 import { daysSooner, projectGoal, projectWithExtra } from '@/engine/goals';
 import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
@@ -25,6 +28,7 @@ export default function GoalDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const goal = useFinancialStore((s) => s.snapshot.goals.find((g) => g.id === id));
+  const currentBalance = useFinancialStore((s) => s.snapshot.currentBalance);
   const contribute = useFinancialStore((s) => s.contributeToGoal);
   const deleteGoal = useFinancialStore((s) => s.deleteGoal);
 
@@ -44,6 +48,9 @@ export default function GoalDetail() {
 
   const [extra, setExtra] = useState(0);
   const [mood, setMood] = useState<MascotMood>('neutral');
+  const [contributionOpen, setContributionOpen] = useState(false);
+  const [contribution, setContribution] = useState('');
+  const [contributionError, setContributionError] = useState('');
 
   const base = useMemo(() => (goal ? projectGoal(goal) : null), [goal]);
   const boosted = useMemo(
@@ -65,7 +72,19 @@ export default function GoalDetail() {
   const sooner = boosted ? daysSooner(base, boosted) : 0;
 
   const onContribute = () => {
-    contribute(goal.id, 15000); // S/ 150
+    const amount = Number(contribution.replace(',', '.'));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setContributionError('Ingresa un monto válido mayor a cero.');
+      return;
+    }
+    const result = contribute(goal.id, Math.round(amount * 100));
+    if (!result.ok) {
+      setContributionError(result.error);
+      return;
+    }
+    setContribution('');
+    setContributionError('');
+    setContributionOpen(false);
     setMood('celebrating');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setTimeout(() => setMood('happy'), 2200);
@@ -73,16 +92,18 @@ export default function GoalDetail() {
 
   return (
     <Screen edges={{ top: true }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
-          <Icon name="chevron-left" size={26} color="secondary" />
-        </Pressable>
-        <Text variant="subtitle" style={{ flex: 1 }}>
-          {goal.name}
-        </Text>
-        <Pressable onPress={confirmDelete} accessibilityRole="button" accessibilityLabel="Eliminar meta" hitSlop={10}>
-          <Icon name="trash-2" size={22} color="muted" />
-        </Pressable>
+      <View style={{ padding: theme.spacing.xl, paddingBottom: theme.spacing.lg }}>
+        <PageHeader
+          eyebrow="Meta"
+          title={goal.name}
+          onBack={() => router.back()}
+          action={
+            <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+              <HeaderIconButton icon="pencil" label="Editar meta" color="brand" onPress={() => router.push({ pathname: '/meta/nueva', params: { id: goal.id } })} />
+              <HeaderIconButton icon="trash-2" label="Eliminar meta" onPress={confirmDelete} />
+            </View>
+          }
+        />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false}>
@@ -148,8 +169,28 @@ export default function GoalDetail() {
           ) : null}
         </Card>
 
-        <Button label="Agregar S/ 150" icon="plus" size="lg" fullWidth onPress={onContribute} />
+        <Button label="Agregar aporte" icon="plus" size="lg" fullWidth onPress={() => setContributionOpen(true)} />
       </ScrollView>
+      <BottomSheet visible={contributionOpen} onClose={() => setContributionOpen(false)} title="Aportar a tu meta">
+        <Text variant="body" color="secondary">
+          El aporte se descontará de tu saldo y quedará registrado en Movimientos.
+        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text variant="caption" color="muted">Saldo disponible</Text>
+          <Text variant="bodyStrong">{formatMoney(currentBalance)}</Text>
+        </View>
+        <TextField
+          label="Monto del aporte"
+          prefix="S/"
+          placeholder="0.00"
+          keyboardType="decimal-pad"
+          value={contribution}
+          onChangeText={(value) => { setContribution(value); setContributionError(''); }}
+          error={contributionError || undefined}
+          autoFocus
+        />
+        <Button label="Confirmar aporte" icon="check" fullWidth onPress={onContribute} />
+      </BottomSheet>
     </Screen>
   );
 }

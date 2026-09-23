@@ -8,6 +8,7 @@ import { Card } from '@/components/common/Card';
 import { Icon } from '@/components/common/Icon';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
+import { PageHeader } from '@/components/common/PageHeader';
 import { MissionCard } from '@/components/financial/MissionCard';
 import { buildMissions } from '@/features/challenges/missions';
 import { useAppStore } from '@/store/appStore';
@@ -37,18 +38,11 @@ export default function Challenges() {
 
   return (
     <Screen edges={{ top: true }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
-          <Icon name="chevron-left" size={26} color="secondary" />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text variant="title">Misiones</Text>
-          <Text variant="caption" color="muted">Pequeños hábitos. Progreso real.</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
+      <View style={{ padding: theme.spacing.xl }}>
+        <PageHeader title="Misiones" subtitle="Retos cortos para ahorrar sin esfuerzo" onBack={() => router.back()} action={<View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
           <Icon name="sprout" size={18} color="positive" />
           <Text variant="bodyStrong" color="positive">{earnedSeeds}</Text>
-        </View>
+        </View>} />
       </View>
 
       <View style={{ flexDirection: 'row', marginHorizontal: theme.spacing.xl, padding: 4, borderRadius: theme.radius.pill, backgroundColor: theme.colors.surface.primary }}>

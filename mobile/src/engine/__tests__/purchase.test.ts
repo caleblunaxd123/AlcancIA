@@ -49,11 +49,21 @@ describe('simulatePurchase', () => {
     expect(sim.obligationsCovered).toBe(false);
   });
 
-  it('reports goal delay for the highest-priority active goal', () => {
+  it('does not report goal delay while a purchase stays inside safe-to-spend', () => {
     const sim = simulatePurchase(snapshot(), fromMajor(400).minor, AS_OF);
+    expect(sim.goalImpact).toBeNull();
+  });
+
+  it('reports goal delay only for the portion beyond safe-to-spend', () => {
+    const sim = simulatePurchase(snapshot(), fromMajor(1000).minor, AS_OF);
     expect(sim.goalImpact).not.toBeNull();
     expect(sim.goalImpact!.goal.id).toBe('g');
     expect(sim.goalImpact!.daysDelayed).toBeGreaterThan(0);
+  });
+
+  it('rejects zero and negative costs', () => {
+    expect(() => simulatePurchase(snapshot(), 0, AS_OF)).toThrow(RangeError);
+    expect(() => simulatePurchase(snapshot(), -100, AS_OF)).toThrow(RangeError);
   });
 
   it('never phrases the result as a command', () => {

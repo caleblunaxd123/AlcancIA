@@ -5,6 +5,7 @@ import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Icon } from '@/components/common/Icon';
+import { PageHeader } from '@/components/common/PageHeader';
 import { Money } from '@/components/financial/Money';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
@@ -66,6 +67,9 @@ export default function Subscriptions() {
                     <Text variant="caption" color="muted">Renueva el día {s.renewalDay}</Text>
                   </View>
                   <Text variant="moneySmall">{formatMoney(s.amount)}</Text>
+                  <Pressable onPress={() => router.push({ pathname: '/suscripciones/nueva', params: { id: s.id } })} accessibilityRole="button" accessibilityLabel={`Editar ${s.name}`} hitSlop={8}>
+                    <Icon name="pencil" size={18} color="brand" />
+                  </Pressable>
                   <Pressable onPress={() => remove(s.id, s.name)} accessibilityRole="button" accessibilityLabel={`Eliminar ${s.name}`} hitSlop={8}>
                     <Icon name="trash-2" size={18} color="muted" />
                   </Pressable>
@@ -84,15 +88,9 @@ export default function Subscriptions() {
 function Header({ onBack, onAdd }: { onBack: () => void; onAdd: () => void }) {
   const theme = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
-      <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10}>
-        <Icon name="chevron-left" size={26} color="secondary" />
-      </Pressable>
-      <Text variant="title" style={{ flex: 1 }}>Suscripciones</Text>
-      <Pressable onPress={onAdd} accessibilityRole="button" accessibilityLabel="Agregar" hitSlop={8}
+    <View style={{ padding: theme.spacing.xl }}><PageHeader title="Suscripciones" subtitle="Lo que pagas cada mes y cuánto suma al año" onBack={onBack} action={<Pressable onPress={onAdd} accessibilityRole="button" accessibilityLabel="Agregar" hitSlop={8}
         style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.brand.soft, borderWidth: 1, borderColor: theme.colors.border.active }}>
         <Icon name="plus" size={22} color="brand" />
-      </Pressable>
-    </View>
+      </Pressable>} /></View>
   );
 }

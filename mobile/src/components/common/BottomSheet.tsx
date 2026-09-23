@@ -9,6 +9,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from './Text';
+import { Icon } from './Icon';
 import { useTheme } from '@/theme';
 
 export type BottomSheetProps = {
@@ -23,11 +24,11 @@ export function BottomSheet({ visible, onClose, title, children }: BottomSheetPr
   const insets = useSafeAreaInsets();
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent accessibilityViewIsModal>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Animated.View
-          entering={FadeIn.duration(theme.motion.normal)}
-          exiting={FadeOut.duration(theme.motion.fast)}
+          entering={theme.reducedMotion ? undefined : FadeIn.duration(theme.motion.normal)}
+          exiting={theme.reducedMotion ? undefined : FadeOut.duration(theme.motion.fast)}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: theme.colors.scrim }}
         >
           <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="Cerrar" accessibilityRole="button" />
@@ -57,9 +58,17 @@ export function BottomSheet({ visible, onClose, title, children }: BottomSheetPr
             />
           </View>
           {title ? (
-            <Text variant="subtitle" style={{ paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.lg }}>
-              {title}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.sm }}>
+              <Text variant="subtitle" accessibilityRole="header" style={{ flex: 1 }}>{title}</Text>
+              <Pressable
+                onPress={onClose}
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar"
+                style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Icon name="x" size={22} color="secondary" />
+              </Pressable>
+            </View>
           ) : null}
           <ScrollView
             contentContainerStyle={{ padding: theme.spacing.xl, gap: theme.spacing.md }}

@@ -1,10 +1,11 @@
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/common/Button';
 import { Icon } from '@/components/common/Icon';
+import { HeaderIconButton, PageHeader } from '@/components/common/PageHeader';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
 import { TextField } from '@/components/common/TextField';
@@ -12,7 +13,9 @@ import { fromMajor } from '@/engine/money';
 import { useAppStore } from '@/store/appStore';
 import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
-import type { GoalKind } from '@/types/domain';
+import type { Goal, GoalKind } from '@/types/domain';
+import { createId } from '@/utils/id';
+import { parseMoneyInput } from '@/utils/validation';
 
 const KINDS: { kind: GoalKind; label: string; icon: string }[] = [
   { kind: 'home', label: 'Casa', icon: 'house' },
@@ -20,6 +23,7 @@ const KINDS: { kind: GoalKind; label: string; icon: string }[] = [
   { kind: 'car', label: 'Auto', icon: 'car' },
   { kind: 'education', label: 'Estudios', icon: 'graduation-cap' },
   { kind: 'emergency', label: 'Emergencia', icon: 'shield' },
+  { kind: 'wedding', label: 'Boda', icon: 'heart' },
   { kind: 'tech', label: 'Tecnología', icon: 'smartphone' },
   { kind: 'pet', label: 'Mascota', icon: 'paw-print' },
   { kind: 'custom', label: 'Otro', icon: 'target' },
@@ -33,43 +37,45 @@ const DEFAULT_NAME: Record<GoalKind, string> = {
 export default function NewGoal() {
   const theme = useTheme();
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const existing = useFinancialStore((s) => s.snapshot.goals.find((item) => item.id === id));
   const addGoal = useFinancialStore((s) => s.addGoal);
+  const updateGoal = useFinancialStore((s) => s.updateGoal);
   const completeStep = useAppStore((s) => s.completeStep);
 
-  const [kind, setKind] = useState<GoalKind>('home');
-  const [name, setName] = useState('');
-  const [target, setTarget] = useState('');
-  const [monthly, setMonthly] = useState('');
+  const [kind, setKind] = useState<GoalKind>(existing?.kind ?? 'home');
+  const [name, setName] = useState(existing?.name ?? '');
+  const [target, setTarget] = useState(existing ? String(existing.target.minor / 100) : '');
+  const [monthly, setMonthly] = useState(existing ? String(existing.monthlyContribution.minor / 100) : '');
 
-  const targetValue = parseFloat(target.replace(',', '.')) || 0;
-  const monthlyValue = parseFloat(monthly.replace(',', '.')) || 0;
-  const canSave = targetValue > 0;
+  const targetValue = parseMoneyInput(target);
+  const monthlyValue = monthly.trim() ? parseMoneyInput(monthly) : 0;
+  const canSave = targetValue !== null && monthlyValue !== null;
 
   const save = () => {
     if (!canSave) return;
-    addGoal({
-      id: `goal-${Date.now()}`,
+    const payload: Goal = {
+      id: existing?.id ?? createId('goal'),
       kind,
       name: name.trim() || DEFAULT_NAME[kind],
-      target: fromMajor(targetValue),
-      saved: fromMajor(0),
-      monthlyContribution: fromMajor(monthlyValue),
+      target: fromMajor(targetValue!),
+      saved: existing?.saved ?? fromMajor(0),
+      monthlyContribution: fromMajor(monthlyValue!),
       priority: 'high',
-    });
-    completeStep('goal');
+    };
+    const result = existing ? updateGoal(existing.id, payload) : addGoal(payload);
+    if (!result.ok) {
+      Alert.alert('No se pudo guardar', result.error);
+      return;
+    }
+    if (!existing) completeStep('goal');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     router.back();
   };
 
   return (
     <Screen edges={{ top: true, bottom: true }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.xl }}>
-        <Text variant="title">Nueva meta</Text>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={10}
-          style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface.primary }}>
-          <Icon name="x" size={22} color="secondary" />
-        </Pressable>
-      </View>
+      <View style={{ padding: theme.spacing.xl }}><PageHeader eyebrow={existing ? 'Plan en evolución' : 'Un sueño con plan'} title={existing ? 'Editar meta' : 'Nueva meta'} subtitle={existing ? 'Actualiza el objetivo sin perder tu avance' : 'Dale nombre, monto y ritmo'} icon="target" action={<HeaderIconButton icon="x" label="Cerrar" onPress={() => router.back()} />} /></View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={{ gap: theme.spacing.md }}>
@@ -97,7 +103,7 @@ export default function NewGoal() {
         <TextField label="Meta a alcanzar" prefix="S/" placeholder="0.00" keyboardType="decimal-pad" value={target} onChangeText={setTarget} />
         <TextField label="Aporte mensual (opcional)" prefix="S/" placeholder="0.00" keyboardType="decimal-pad" value={monthly} onChangeText={setMonthly} />
 
-        <Button label="Crear meta" size="lg" fullWidth icon="check" disabled={!canSave} onPress={save} />
+        <Button label={existing ? 'Guardar cambios' : 'Crear meta'} size="lg" fullWidth icon="check" disabled={!canSave} onPress={save} />
       </ScrollView>
     </Screen>
   );

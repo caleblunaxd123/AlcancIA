@@ -9,6 +9,7 @@
  * so the UI can always answer "¿Cómo lo calculamos?".
  */
 import { add, clampToZero, money, scale, subtract, sum } from './money';
+import { nextOccurrence, occurrencesBetween, recurrenceAnchor } from './recurrence';
 import { CATEGORIES } from '@/constants/categories';
 import type { CurrencyCode, Money } from '@/types/money';
 import type { FinancialSnapshot } from '@/types/domain';
@@ -45,15 +46,19 @@ function estimateVariableEssentials(
   snapshot: FinancialSnapshot,
   periodDays: number,
   currency: CurrencyCode,
+  asOf: Date,
 ): Money {
   const variableEssentialCats = Object.values(CATEGORIES).filter(
     (c) => c.essential && c.id !== 'housing' && c.id !== 'services' && c.id !== 'debt',
   );
   const catIds = new Set(variableEssentialCats.map((c) => c.id));
 
-  const realSpend = snapshot.transactions.filter(
-    (t) => t.kind === 'expense' && catIds.has(t.category) && t.certainty === 'real',
-  );
+  const windowStart = addDays(asOf, -90);
+  const realSpend = snapshot.transactions.filter((t) => {
+    const date = parseISO(t.date);
+    return t.kind === 'expense' && catIds.has(t.category) && t.certainty === 'real'
+      && date >= windowStart && date <= asOf;
+  });
 
   if (realSpend.length === 0) {
     return money(DEFAULT_ESSENTIAL_MONTHLY_ESTIMATE, currency);
@@ -83,8 +88,7 @@ export function calculateSafeToSpend(
 
   // 1. Determine period end = next expected income.
   const futureIncomes = snapshot.income
-    .map((i) => ({ income: i, date: parseISO(i.nextDate) }))
-    .filter((x) => x.date.getTime() >= asOf.getTime())
+    .map((income) => ({ income, date: nextOccurrence({ frequency: income.frequency, anchorDate: income.nextDate }, asOf) }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const nextIncome = futureIncomes[0] ?? null;
@@ -106,17 +110,18 @@ export function calculateSafeToSpend(
     (r) => r.kind === 'expense' && r.essential,
   );
   for (const o of obligations) {
-    const due = o.dayOfMonth ? nextDayOfMonth(o.dayOfMonth, asOf) : addDays(asOf, 15);
-    if (due.getTime() <= periodEnd.getTime()) {
+    const anchorDate = o.nextDate ?? recurrenceAnchor(o.dayOfMonth ?? 15, asOf);
+    const occurrences = occurrencesBetween({ frequency: o.frequency, anchorDate }, asOf, periodEnd);
+    occurrences.forEach((due, index) => {
       available = subtract(available, o.amount);
       breakdown.push({
-        key: `obligation-${o.id}`,
-        label: o.description,
+        key: occurrences.length > 1 ? `obligation-${o.id}-${index}` : `obligation-${o.id}`,
+        label: occurrences.length > 1 ? `${o.description} (${due.getDate()})` : o.description,
         amount: o.amount,
         direction: 'subtract',
         certainty: 'scheduled',
       });
-    }
+    });
   }
 
   // 4. Subtract debt minimum payments due before period end.
@@ -135,9 +140,11 @@ export function calculateSafeToSpend(
   }
 
   // 5. Subtract subscriptions renewing before period end.
-  const subsTotal = snapshot.subscriptions
-    .filter((s) => nextDayOfMonth(s.renewalDay, asOf).getTime() <= periodEnd.getTime())
-    .reduce((acc, s) => add(acc, s.amount), money(0, currency));
+  const subsTotal = snapshot.subscriptions.reduce((acc, subscription) => {
+    const anchorDate = subscription.nextRenewalDate ?? recurrenceAnchor(subscription.renewalDay, asOf);
+    const count = occurrencesBetween({ frequency: subscription.frequency, anchorDate }, asOf, periodEnd).length;
+    return add(acc, scale(subscription.amount, count));
+  }, money(0, currency));
   if (subsTotal.minor > 0) {
     available = subtract(available, subsTotal);
     breakdown.push({
@@ -150,7 +157,7 @@ export function calculateSafeToSpend(
   }
 
   // 6. Subtract estimated variable essentials for the remaining period.
-  const essentials = estimateVariableEssentials(snapshot, daysUntilIncome, currency);
+  const essentials = estimateVariableEssentials(snapshot, daysUntilIncome, currency, asOf);
   if (essentials.minor > 0) {
     available = subtract(available, essentials);
     breakdown.push({

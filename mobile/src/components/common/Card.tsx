@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { View, type ViewProps, type ViewStyle } from 'react-native';
 
 import { useTheme } from '@/theme';
@@ -18,12 +17,17 @@ export type CardProps = ViewProps & {
 };
 
 /**
- * AlcanciaCard — the foundational surface. Navy fill, hair-thin border, high
- * radius, generous padding, restrained elevation. `highlight`/`goal`/`insight`
- * carry a subtle brand gradient wash.
+ * AlcanciaCard — the foundational surface, banking style: a clean white sheet
+ * with a hair-thin border and a soft shadow. Color is reserved for what truly
+ * matters, so hierarchy survives on a busy screen:
+ *  - highlight: faint brand tint + brand border (the one thing to act on)
+ *  - success:   faint positive tint
+ *  - insight:   brand accent stripe on the leading edge
+ *  - default / goal / interactive: plain surface
  */
 export function Card({ variant = 'default', padded = true, style, children, ...rest }: CardProps) {
   const theme = useTheme();
+  const light = theme.scheme === 'light';
 
   const base: ViewStyle = {
     borderRadius: theme.radius.xl,
@@ -34,45 +38,39 @@ export function Card({ variant = 'default', padded = true, style, children, ...r
     overflow: 'hidden',
   };
 
-  const gradientFor: Partial<Record<CardVariant, [string, string]>> = {
-    highlight: [theme.colors.brand.soft, 'transparent'],
-    goal: [theme.colors.brand.soft, 'transparent'],
-    insight: [
-      theme.scheme === 'dark' ? 'rgba(66, 224, 181, 0.10)' : 'rgba(31, 184, 148, 0.08)',
-      'transparent',
-    ],
-    success: [
-      theme.scheme === 'dark' ? 'rgba(66, 224, 181, 0.14)' : 'rgba(31, 184, 148, 0.10)',
-      'transparent',
-    ],
+  const variantStyle: Partial<Record<CardVariant, ViewStyle>> = {
+    highlight: { borderColor: theme.colors.border.active },
+    interactive: { borderColor: theme.colors.border.strong },
+    success: { borderColor: theme.colors.border.active },
   };
 
-  const variantBorder: Partial<Record<CardVariant, string>> = {
-    highlight: theme.colors.border.active,
-    goal: theme.colors.border.active,
-    interactive: theme.colors.border.strong,
+  const tint: Partial<Record<CardVariant, string>> = {
+    highlight: theme.colors.brand.soft,
+    success: theme.colors.brand.soft,
   };
 
-  const gradient = gradientFor[variant];
+  const shadow: ViewStyle = light
+    ? {
+        shadowColor: '#0F1B2D',
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 2,
+      }
+    : theme.elevation.sm;
 
   return (
-    <View
-      style={[
-        base,
-        variantBorder[variant] ? { borderColor: variantBorder[variant] } : null,
-        theme.scheme === 'light'
-          ? { shadowColor: '#163D2C', shadowOpacity: 0.07, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 2 }
-          : theme.elevation.sm,
-        style,
-      ]}
-      {...rest}
-    >
-      {gradient ? (
-        <LinearGradient
-          colors={gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+    <View style={[base, variantStyle[variant], shadow, style]} {...rest}>
+      {tint[variant] ? (
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: tint[variant] }}
+        />
+      ) : null}
+      {variant === 'insight' ? (
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 4, backgroundColor: theme.colors.brand.primary }}
         />
       ) : null}
       {children}

@@ -6,6 +6,7 @@
 import { formatMoney, money, sum } from './money';
 import type { FinancialSnapshot, Transaction } from '@/types/domain';
 import { parseISO, daysBetween } from '@/utils/date';
+import { CATEGORIES } from '@/constants/categories';
 
 export type Insight = {
   id: string;
@@ -55,9 +56,20 @@ export function generateInsights(snapshot: FinancialSnapshot): Insight[] {
   // Emergency fund milestone.
   const emergency = snapshot.goals.find((g) => g.kind === 'emergency');
   if (emergency) {
-    const monthlyEssentials = snapshot.recurring
+    const fixedEssentials = snapshot.recurring
       .filter((r) => r.essential)
-      .reduce((acc, r) => acc + r.amount.minor, 0);
+      .reduce((acc, r) => {
+        const factor = r.frequency === 'weekly' ? 4.333 : r.frequency === 'biweekly' ? 2 : r.frequency === 'yearly' ? 1 / 12 : 1;
+        return acc + Math.round(r.amount.minor * factor);
+      }, 0);
+    const variableEssentials = snapshot.transactions
+      .filter((transaction) => transaction.kind === 'expense'
+        && CATEGORIES[transaction.category].essential
+        && daysBetween(parseISO(transaction.date), new Date()) >= 0
+        && daysBetween(parseISO(transaction.date), new Date()) <= 30)
+      .reduce((total, transaction) => total + transaction.amount.minor, 0);
+    const debtMinimums = snapshot.debts.reduce((total, debt) => total + debt.minimumPayment.minor, 0);
+    const monthlyEssentials = fixedEssentials + variableEssentials + debtMinimums;
     if (emergency.saved.minor >= monthlyEssentials && monthlyEssentials > 0) {
       insights.push({
         id: 'emergency-milestone',

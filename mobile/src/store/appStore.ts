@@ -22,6 +22,7 @@ type AppState = {
   hydrated: boolean;
 
   completeOnboarding: (mode: AppMode, name: string) => void;
+  setName: (name: string) => void;
   resetOnboarding: () => void;
   setHaptics: (v: boolean) => void;
   setThemePreference: (p: ThemePreference) => void;
@@ -44,6 +45,7 @@ export const useAppStore = create<AppState>()(
       hydrated: false,
 
       completeOnboarding: (mode, name) => set({ onboarded: true, mode, name }),
+      setName: (name) => set({ name: name.trim() }),
       resetOnboarding: () =>
         set({ onboarded: false, mode: 'empty', name: '', completedSteps: [], claimedMissions: [], stepsDismissed: false }),
       setHaptics: (v) => set({ hapticsEnabled: v }),

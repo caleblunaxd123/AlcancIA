@@ -15,8 +15,8 @@ import { Text } from '@/components/common/Text';
 import { useTheme } from '@/theme';
 import type { WeatherState } from '@/types/domain';
 
-const financialHouseDark = require('../../../assets/branding/financial-house.png');
-const financialHouseLight = require('../../../assets/branding/financial-house-light.png');
+const financialHouseDark = require('../../../assets/branding/financial-house.webp');
+const financialHouseLight = require('../../../assets/branding/financial-house-light.webp');
 
 export type FinancialHouseProps = {
   /** 0..1 overall health. */
@@ -39,10 +39,9 @@ const STATUS: Record<WeatherState, { label: string; icon: string }> = {
  * Living financial-home diorama. The scene is art, while status, growth and
  * accessibility remain driven by the real financial engine.
  */
-export function FinancialHouse({ health, savingsProgress, weather, width = 320 }: FinancialHouseProps) {
+export function FinancialHouse({ savingsProgress, weather, width = 320 }: FinancialHouseProps) {
   const theme = useTheme();
   const pulse = useSharedValue(1);
-  const normalizedHealth = Math.max(0, Math.min(1, health));
   const normalizedSavings = Math.max(0, Math.min(1, savingsProgress));
   const height = width * 0.64;
   const status = STATUS[weather];
@@ -57,7 +56,7 @@ export function FinancialHouse({ health, savingsProgress, weather, width = 320 }
         withTiming(1.08, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
         withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
       ),
-      -1,
+      3,
       false,
     );
   }, [pulse, theme.reducedMotion]);
@@ -119,8 +118,10 @@ export function FinancialHouse({ health, savingsProgress, weather, width = 320 }
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
-            <Text variant="caption" style={{ color: secondaryOverlayText }}>Crecimiento de tu hogar</Text>
-            <Text variant="bodyStrong" style={{ color: primaryOverlayText }}>{Math.round(normalizedHealth * 100)}%</Text>
+            {/* Label and bar must describe the same number: real savings
+                progress (health has a 60% baseline and would lie at zero). */}
+            <Text variant="caption" style={{ color: secondaryOverlayText }}>Tu hogar crece con tu ahorro</Text>
+            <Text variant="bodyStrong" style={{ color: primaryOverlayText }}>{Math.round(normalizedSavings * 100)}%</Text>
           </View>
           <View style={{ height: 6, borderRadius: 3, backgroundColor: isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)', overflow: 'hidden' }}>
             <View

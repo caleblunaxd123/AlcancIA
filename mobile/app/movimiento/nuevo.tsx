@@ -1,10 +1,11 @@
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/common/Button';
 import { Icon } from '@/components/common/Icon';
+import { HeaderIconButton, PageHeader } from '@/components/common/PageHeader';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
 import { TextField } from '@/components/common/TextField';
@@ -13,8 +14,10 @@ import { fromMajor } from '@/engine/money';
 import { useAppStore } from '@/store/appStore';
 import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
-import type { CategoryId, TransactionKind } from '@/types/domain';
+import type { CategoryId, Transaction, TransactionKind } from '@/types/domain';
 import { toISODate } from '@/utils/date';
+import { createId } from '@/utils/id';
+import { isISODateInput, parseMoneyInput } from '@/utils/validation';
 
 const EXPENSE_CATEGORIES: CategoryId[] = [
   'food', 'delivery', 'transport', 'housing', 'services', 'health',
@@ -25,44 +28,49 @@ const INCOME_CATEGORIES: CategoryId[] = ['salary', 'transfer', 'other'];
 export default function NewTransaction() {
   const theme = useTheme();
   const router = useRouter();
+  const { id, kind: kindParam } = useLocalSearchParams<{ id?: string; kind?: string }>();
+  const existing = useFinancialStore((s) => s.snapshot.transactions.find((item) => item.id === id));
   const addTransaction = useFinancialStore((s) => s.addTransaction);
+  const updateTransaction = useFinancialStore((s) => s.updateTransaction);
   const completeStep = useAppStore((s) => s.completeStep);
 
-  const [kind, setKind] = useState<TransactionKind>('expense');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState<CategoryId>('food');
-  const [description, setDescription] = useState('');
+  // Quick actions open this screen already set to "gasto" or "ingreso".
+  const initialKind: TransactionKind = existing?.kind ?? (kindParam === 'income' ? 'income' : 'expense');
+  const [kind, setKind] = useState<TransactionKind>(initialKind);
+  const [amount, setAmount] = useState(existing ? String(existing.amount.minor / 100) : '');
+  const [category, setCategory] = useState<CategoryId>(existing?.category ?? (initialKind === 'income' ? 'salary' : 'food'));
+  const [description, setDescription] = useState(existing?.description ?? '');
+  const [date, setDate] = useState(existing?.date ?? toISODate(new Date()));
 
-  const amountValue = parseFloat(amount.replace(',', '.')) || 0;
-  const canSave = amountValue > 0;
+  const amountValue = parseMoneyInput(amount);
+  const canSave = amountValue !== null && isISODateInput(date);
   const categories = kind === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
   const save = () => {
     if (!canSave) return;
-    addTransaction({
-      id: `t-${Date.now()}`,
+    const payload: Transaction = {
+      id: existing?.id ?? createId('t'),
       kind,
-      amount: fromMajor(amountValue),
+      amount: fromMajor(amountValue!),
       category,
       description: description.trim() || CATEGORIES[category].label,
-      date: toISODate(new Date()),
+      date,
       certainty: 'real',
-      source: 'manual',
-    });
-    completeStep('transaction');
+      source: 'manual', operation: 'manual',
+    };
+    const result = existing ? updateTransaction(existing.id, payload) : addTransaction(payload);
+    if (!result.ok) {
+      Alert.alert('No se pudo guardar', result.error);
+      return;
+    }
+    if (!existing) completeStep('transaction');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     router.back();
   };
 
   return (
     <Screen edges={{ top: true, bottom: true }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.xl }}>
-        <Text variant="title">Nuevo movimiento</Text>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={10}
-          style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface.primary }}>
-          <Icon name="x" size={22} color="secondary" />
-        </Pressable>
-      </View>
+      <View style={{ padding: theme.spacing.xl }}><PageHeader eyebrow={existing ? 'Ajuste preciso' : 'Registro rápido'} title={existing ? 'Editar movimiento' : 'Registrar movimiento'} subtitle={existing ? 'El saldo se recalculará automáticamente' : 'Añádelo en menos de un minuto'} icon="receipt-text" action={<HeaderIconButton icon="x" label="Cerrar" onPress={() => router.back()} />} /></View>
 
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Type toggle */}
@@ -110,8 +118,16 @@ export default function NewTransaction() {
         </View>
 
         <TextField label="Descripción (opcional)" placeholder="¿En qué fue?" value={description} onChangeText={setDescription} />
+        <TextField
+          label="Fecha"
+          placeholder="AAAA-MM-DD"
+          value={date}
+          onChangeText={setDate}
+          keyboardType="numbers-and-punctuation"
+          error={date.length === 10 && !isISODateInput(date) ? 'Usa una fecha válida en formato AAAA-MM-DD.' : undefined}
+        />
 
-        <Button label="Guardar movimiento" size="lg" fullWidth icon="check" disabled={!canSave} onPress={save} />
+        <Button label={existing ? 'Guardar cambios' : 'Guardar movimiento'} size="lg" fullWidth icon="check" disabled={!canSave} onPress={save} />
       </ScrollView>
     </Screen>
   );

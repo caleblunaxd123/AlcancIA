@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, type LayoutChangeEvent } from 'react-native';
+import { View, type AccessibilityActionEvent, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -70,6 +70,10 @@ export function ScenarioSlider({
   }));
 
   const onLayout = (e: LayoutChangeEvent) => setTrackWidth(e.nativeEvent.layout.width);
+  const onAccessibilityAction = (event: AccessibilityActionEvent) => {
+    const delta = event.nativeEvent.actionName === 'increment' ? step : -step;
+    onChange(clampToStep(value + delta));
+  };
 
   return (
     <View>
@@ -86,9 +90,12 @@ export function ScenarioSlider({
       <GestureDetector gesture={Gesture.Simultaneous(pan, tap)}>
         <View
           onLayout={onLayout}
-          style={{ height: THUMB, justifyContent: 'center' }}
+          style={{ height: 44, justifyContent: 'center' }}
           accessibilityRole="adjustable"
+          accessibilityLabel={label ?? 'Selector de valor'}
           accessibilityValue={{ min, max, now: value }}
+          accessibilityActions={[{ name: 'increment', label: 'Aumentar' }, { name: 'decrement', label: 'Disminuir' }]}
+          onAccessibilityAction={onAccessibilityAction}
         >
           <View
             style={{

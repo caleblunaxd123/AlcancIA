@@ -15,6 +15,7 @@ import { Card } from '@/components/common/Card';
 import { Icon } from '@/components/common/Icon';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
+import { PageHeader } from '@/components/common/PageHeader';
 import { AlcanciaMascot, type MascotMood } from '@/components/financial/AlcanciaMascot';
 import { Money } from '@/components/financial/Money';
 import { formatMoney } from '@/engine/money';
@@ -25,6 +26,7 @@ import { useAppStore } from '@/store/appStore';
 import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
 import { formatMonthYear } from '@/utils/date';
+import { monthlyMinor } from '@/engine/subscriptions';
 
 const PROMPTS = [
   { key: 'buy', label: '¿Puedo comprar algo?', icon: 'shopping-bag' },
@@ -62,7 +64,7 @@ function localAnswer(key: string, snapshot: ReturnType<typeof useFinancialStore.
     }
   }
   if (key === 'subs') {
-    const total = snapshot.subscriptions.reduce((acc, subscription) => acc + subscription.amount.minor, 0);
+    const total = snapshot.subscriptions.reduce((acc, subscription) => acc + monthlyMinor(subscription), 0);
     return {
       summary: `Tus suscripciones suman ${formatMoney({ minor: total, currency: 'PEN' })} al mes.`,
       impactLevel: 'low',
@@ -97,18 +99,19 @@ export default function AssistantHome() {
   const theme = useTheme();
   const router = useRouter();
   const snapshot = useFinancialStore((state) => state.snapshot);
-  const [answer, setAnswer] = useState<AiAnswer | null>(null);
+  const [messages, setMessages] = useState<{ id: string; question: string; answer: AiAnswer }[]>([]);
   const [question, setQuestion] = useState('');
-  const [lastQuestion, setLastQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [mood, setMood] = useState<MascotMood>('happy');
   const completeStep = useAppStore((state) => state.completeStep);
   const scrollRef = useRef<ScrollView>(null);
+  const requestRef = useRef<AbortController | null>(null);
   const weather = deriveWeather(snapshot);
   const primaryGoal = snapshot.goals[0];
 
   useEffect(() => {
     completeStep('ask-ai');
+    return () => requestRef.current?.abort();
   }, [completeStep]);
 
   const respond = async (text: string, explicitKey?: string) => {
@@ -121,16 +124,19 @@ export default function AssistantHome() {
     }
 
     setQuestion('');
-    setLastQuestion(trimmed);
     setLoading(true);
     setMood('thinking');
-    setAnswer(null);
+    const controller = new AbortController();
+    requestRef.current = controller;
     try {
-      const result = await askAlcancIA(trimmed, snapshot);
-      setAnswer(result.answer);
+      const result = await askAlcancIA(trimmed, snapshot, controller.signal);
+      setMessages((current) => [...current, { id: `${Date.now()}-${current.length}`, question: trimmed, answer: result.answer }]);
     } catch {
-      setAnswer(localAnswer(key, snapshot));
+      if (!controller.signal.aborted) {
+        setMessages((current) => [...current, { id: `${Date.now()}-${current.length}`, question: trimmed, answer: localAnswer(key, snapshot) }]);
+      }
     } finally {
+      if (requestRef.current === controller) requestRef.current = null;
       setLoading(false);
       setMood('happy');
       requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: !theme.reducedMotion }));
@@ -146,18 +152,12 @@ export default function AssistantHome() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View>
-              <Text variant="title">Asistente AlcancIA</Text>
-              <Text variant="caption" color="positive">Contexto financiero actualizado</Text>
-            </View>
-            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.colors.money.positive }} />
-          </View>
+          <PageHeader title="AlcancIA" subtitle="Pregúntame por una compra, tus metas o tus gastos" icon="sparkles" action={<View accessibilityLabel="Asistente disponible" style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.colors.money.positive }} />} />
 
           <Animated.View entering={theme.reducedMotion ? undefined : FadeInUp.duration(theme.motion.slow)}>
             <Card variant="highlight" style={{ minHeight: 190 }}>
               <View style={{ width: '62%', gap: theme.spacing.sm }}>
-                <Text variant="subtitle">Hola 👋 Soy tu AlcancIA</Text>
+                <Text variant="subtitle">Soy AlcancIA, tu asistente financiero</Text>
                 <Text variant="body" color="secondary">
                   Estoy mirando tu contexto para ayudarte a decidir, ahorrar y avanzar sin juzgarte.
                 </Text>
@@ -165,6 +165,9 @@ export default function AssistantHome() {
                   <Icon name="shield-check" size={15} color="positive" />
                   <Text variant="caption" color="positive">Tus cálculos ocurren en el motor financiero</Text>
                 </View>
+                <Text variant="caption" color="muted">
+                  Al enviar una pregunta, compartimos únicamente el resumen financiero visible aquí; nunca tu historial completo.
+                </Text>
               </View>
               <View style={{ position: 'absolute', right: 8, bottom: 4 }}>
                 <AlcanciaMascot mood={mood} size={138} />
@@ -209,13 +212,16 @@ export default function AssistantHome() {
             ))}
           </View>
 
-          {lastQuestion ? (
-            <Animated.View entering={theme.reducedMotion ? undefined : FadeIn.duration(theme.motion.fast)} style={{ alignSelf: 'flex-end', maxWidth: '84%' }}>
-              <View style={{ paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.md, borderRadius: theme.radius.xl, borderBottomRightRadius: theme.radius.sm, backgroundColor: theme.colors.brand.primary }}>
-                <Text variant="body" color="onBrand">{lastQuestion}</Text>
-              </View>
-            </Animated.View>
-          ) : null}
+          {messages.map((message) => (
+            <View key={message.id} style={{ gap: theme.spacing.sm }}>
+              <Animated.View entering={theme.reducedMotion ? undefined : FadeIn.duration(theme.motion.fast)} style={{ alignSelf: 'flex-end', maxWidth: '84%' }}>
+                <View style={{ paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.md, borderRadius: theme.radius.xl, borderBottomRightRadius: theme.radius.sm, backgroundColor: theme.colors.brand.primary }}>
+                  <Text variant="body" color="onBrand">{message.question}</Text>
+                </View>
+              </Animated.View>
+              <AiAnswerCard answer={message.answer} />
+            </View>
+          ))}
 
           {loading ? (
             <Card variant="highlight">
@@ -225,11 +231,13 @@ export default function AssistantHome() {
                   <Text variant="bodyStrong">Estoy revisando tus números…</Text>
                   <Text variant="caption" color="muted">Sin inventar montos ni decisiones.</Text>
                 </View>
+                <Pressable onPress={() => requestRef.current?.abort()} accessibilityRole="button" accessibilityLabel="Cancelar consulta" style={{ minHeight: 44, justifyContent: 'center' }}>
+                  <Text variant="bodyStrong" color="brand">Cancelar</Text>
+                </Pressable>
               </View>
             </Card>
           ) : null}
 
-          {answer && !loading ? <AiAnswerCard answer={answer} /> : null}
         </ScrollView>
 
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.xl, paddingVertical: theme.spacing.sm, borderTopWidth: 1, borderTopColor: theme.colors.border.subtle, backgroundColor: theme.colors.background.secondary }}>
@@ -292,7 +300,7 @@ function AiAnswerCard({ answer }: { answer: AiAnswer }) {
           </View>
         ))}
         <Text variant="caption" color="muted" style={{ marginTop: theme.spacing.lg }}>
-          Tú decides. AlcancIA te muestra el impacto.
+          Fuente: {answer.source === 'device' || answer.source === 'local' ? 'motor local del dispositivo' : answer.source}. Tú decides; AlcancIA te muestra el impacto.
         </Text>
       </Card>
     </Animated.View>

@@ -1,11 +1,11 @@
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/common/Button';
 import { Chip } from '@/components/common/Chip';
-import { Icon } from '@/components/common/Icon';
+import { HeaderIconButton, PageHeader } from '@/components/common/PageHeader';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
 import { TextField } from '@/components/common/TextField';
@@ -14,60 +14,55 @@ import { fromMajor } from '@/engine/money';
 import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
 import type { Debt } from '@/types/domain';
+import { createId } from '@/utils/id';
+import { parseMoneyInput } from '@/utils/validation';
 
 const KINDS = Object.keys(DEBT_KIND_LABELS) as Debt['kind'][];
 const DAYS = [1, 5, 10, 15, 20, 25, 28];
 
-function parseAmount(raw: string): number {
-  return parseFloat(raw.replace(',', '.')) || 0;
-}
-
 export default function NewDebt() {
   const theme = useTheme();
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const existing = useFinancialStore((s) => s.snapshot.debts.find((item) => item.id === id));
   const addDebt = useFinancialStore((s) => s.addDebt);
+  const updateDebt = useFinancialStore((s) => s.updateDebt);
 
-  const [name, setName] = useState('');
-  const [kind, setKind] = useState<Debt['kind']>('card');
-  const [balance, setBalance] = useState('');
-  const [minimum, setMinimum] = useState('');
-  const [rate, setRate] = useState('');
-  const [dueDay, setDueDay] = useState(15);
+  const [name, setName] = useState(existing?.name ?? '');
+  const [kind, setKind] = useState<Debt['kind']>(existing?.kind ?? 'card');
+  const [balance, setBalance] = useState(existing ? String(existing.balance.minor / 100) : '');
+  const [minimum, setMinimum] = useState(existing ? String(existing.minimumPayment.minor / 100) : '');
+  const [rate, setRate] = useState(existing ? String(existing.annualRate * 100) : '');
+  const [dueDay, setDueDay] = useState(existing?.dueDay ?? 15);
 
-  const balanceValue = parseAmount(balance);
-  const minimumValue = parseAmount(minimum);
-  const rateValue = parseAmount(rate);
-  const canSave = name.trim().length > 0 && balanceValue > 0 && minimumValue > 0;
+  const balanceValue = parseMoneyInput(balance);
+  const minimumValue = parseMoneyInput(minimum);
+  const rateValue = rate.trim() ? parseMoneyInput(rate) : 0;
+  const canSave = name.trim().length > 0 && balanceValue !== null && minimumValue !== null && rateValue !== null && minimumValue <= balanceValue;
 
   const save = () => {
     if (!canSave) return;
-    addDebt({
-      id: `debt-${Date.now()}`,
+    const payload: Debt = {
+      id: existing?.id ?? createId('debt'),
       name: name.trim(),
       kind,
-      balance: fromMajor(balanceValue),
-      minimumPayment: fromMajor(minimumValue),
-      annualRate: rateValue / 100,
+      balance: fromMajor(balanceValue!),
+      minimumPayment: fromMajor(minimumValue!),
+      annualRate: rateValue! / 100,
       dueDay,
-    });
+    };
+    const result = existing ? updateDebt(existing.id, payload) : addDebt(payload);
+    if (!result.ok) {
+      Alert.alert('No se pudo guardar', result.error);
+      return;
+    }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     router.back();
   };
 
   return (
     <Screen edges={{ top: true, bottom: true }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.xl }}>
-        <Text variant="title">Nueva deuda</Text>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar"
-          hitSlop={10}
-          style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface.primary }}
-        >
-          <Icon name="x" size={22} color="secondary" />
-        </Pressable>
-      </View>
+      <View style={{ padding: theme.spacing.xl }}><PageHeader eyebrow={existing ? 'Plan actualizado' : 'Orden sin culpa'} title={existing ? 'Editar deuda' : 'Nueva deuda'} subtitle={existing ? 'Mantén tu ruta de pago al día' : 'Conocerla es el primer paso para reducirla'} icon="credit-card" action={<HeaderIconButton icon="x" label="Cerrar" onPress={() => router.back()} />} /></View>
 
       <ScrollView
         contentContainerStyle={{ padding: theme.spacing.xl, paddingTop: 0, gap: theme.spacing.xl }}
@@ -98,7 +93,7 @@ export default function NewDebt() {
           </View>
         </View>
 
-        <Button label="Guardar deuda" size="lg" fullWidth icon="check" disabled={!canSave} onPress={save} />
+        <Button label={existing ? 'Guardar cambios' : 'Guardar deuda'} size="lg" fullWidth icon="check" disabled={!canSave} onPress={save} />
       </ScrollView>
     </Screen>
   );

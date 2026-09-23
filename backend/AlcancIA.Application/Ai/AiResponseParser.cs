@@ -10,6 +10,9 @@ namespace AlcancIA.Application.Ai;
 /// </summary>
 public static class AiResponseParser
 {
+    private const int MaxSummaryLength = 800;
+    private const int MaxItems = 6;
+    private const int MaxItemLength = 300;
     public static AiResponse? TryParse(string? rawText, string source)
     {
         if (string.IsNullOrWhiteSpace(rawText))
@@ -41,7 +44,7 @@ public static class AiResponseParser
 
             return new AiResponse
             {
-                Summary = summaryEl.GetString()!.Trim(),
+                Summary = Limit(summaryEl.GetString()!.Trim(), MaxSummaryLength),
                 ImpactLevel = ParseImpact(root),
                 Facts = ReadStringArray(root, "facts"),
                 Recommendations = ReadStringArray(root, "recommendations"),
@@ -94,18 +97,21 @@ public static class AiResponseParser
         }
 
         var list = new List<string>();
-        foreach (var item in el.EnumerateArray())
+        foreach (var item in el.EnumerateArray().Take(MaxItems))
         {
             if (item.ValueKind == JsonValueKind.String)
             {
                 var s = item.GetString();
                 if (!string.IsNullOrWhiteSpace(s))
                 {
-                    list.Add(s.Trim());
+                    list.Add(Limit(s.Trim(), MaxItemLength));
                 }
             }
         }
 
         return list;
     }
+
+    private static string Limit(string value, int maxLength) =>
+        value.Length <= maxLength ? value : value[..maxLength].TrimEnd();
 }
