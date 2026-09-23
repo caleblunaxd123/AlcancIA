@@ -19,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Environment variables like Ai__ApiKey / Ai__Model override appsettings (§75).
 builder.Configuration.AddEnvironmentVariables();
+builder.ValidateProductionConfiguration();
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 64 * 1024);
 
 // Serialize enums as camelCase strings ("low"/"medium"/"high"), not integers.
@@ -29,6 +30,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddOpenApi();
+builder.Services.AddHosting(builder.Configuration);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IVerificationMailer, SmtpVerificationMailer>();
 builder.Services.AddSingleton<EmailVerification>();
@@ -109,11 +111,13 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseHosting();
 app.UseCors("app");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapReadiness();
 app.MapAccountEndpoints();
 app.MapSyncEndpoints();
 
@@ -124,8 +128,8 @@ app.MapPost("/api/email/request", async (EmailCodeRequest request, EmailVerifica
         return Results.BadRequest(new { error = "Revisa el correo electrónico." });
     if (request.Purpose == "register" && await db.Users.AnyAsync(u => u.Email == email, ct))
         return Results.Json(new { error = "Ya existe una cuenta con ese correo. Inicia sesión." }, statusCode: 409);
-    // Recovery never reveals whether an address is registered: same answer, no email sent.
-    if (request.Purpose == "recover" && !await db.Users.AnyAsync(u => u.Email == email && u.Provider == "password", ct))
+    // Recovery/deletion never reveal whether an address is registered: same answer, no email sent.
+    if (request.Purpose is "recover" or "delete" && !await db.Users.AnyAsync(u => u.Email == email && (request.Purpose == "delete" || u.Provider == "password"), ct))
         return Results.Ok(new { challengeId = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), expiresInSeconds = 600, resendAfterSeconds = 60 });
     var result = await verification.Request(email!, request.Purpose!, ct);
     return Results.Json(result.Body, statusCode: result.Status);
@@ -167,6 +171,7 @@ app.MapPost("/api/ai/chat", async (ChatRequest request, IChatService chat, Cance
     .RequireRateLimiting("ai")
     .WithName("AiChat");
 
+await app.MigrateIfConfiguredAsync();
 app.Run();
 
 static string? ValidateRequest(ChatRequest request)

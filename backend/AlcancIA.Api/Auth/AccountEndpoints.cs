@@ -1,8 +1,11 @@
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using AlcancIA.Domain.Accounts;
 using AlcancIA.Infrastructure.Persistence;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlcancIA.Api.Auth;
@@ -14,6 +17,7 @@ public sealed record RefreshRequest(string? RefreshToken);
 public sealed record ResetPasswordRequest(string? Email, string? Password, string? Ticket);
 public sealed record UpdateProfileRequest(string? Name);
 public sealed record ChangePasswordRequest(string? CurrentPassword, string? Password);
+public sealed record DeleteAccountRequest(string? Ticket);
 
 public static partial class AccountEndpoints
 {
@@ -132,6 +136,36 @@ public static partial class AccountEndpoints
             user.Name = name;
             await db.SaveChangesAsync(ct);
             return Results.Ok(TokenService.ToDto(user));
+        });
+
+        // Data export (right of access, Ley 29733 / GDPR-style): profile + the decrypted document.
+        me.MapGet("/export", async (ClaimsPrincipal principal, AppDbContext db, IDataProtectionProvider dp, TimeProvider clock, CancellationToken ct) =>
+        {
+            if (UserId(principal) is not { } id || await db.Users.FindAsync([id], ct) is not { } user) return Results.Unauthorized();
+            var row = await db.UserData.AsNoTracking().SingleOrDefaultAsync(d => d.UserId == id, ct);
+            JsonElement? data = null;
+            if (row is not null)
+            {
+                using var doc = JsonDocument.Parse(dp.CreateProtector(Sync.SyncEndpoints.ProtectorPurpose).Unprotect(row.Payload));
+                data = doc.RootElement.Clone();
+            }
+            return Results.Ok(new
+            {
+                exportedAt = clock.GetUtcNow(),
+                account = new { user.Email, user.Name, user.Provider, user.EmailVerifiedAt, user.CreatedAt },
+                data,
+            });
+        });
+
+        // Account deletion (store policy + §21). Requires a fresh email code so an
+        // unlocked phone alone cannot erase the account. Cascades to sessions and data.
+        me.MapDelete("/", async ([FromBody] DeleteAccountRequest req, ClaimsPrincipal principal, AppDbContext db, VerificationTickets tickets, CancellationToken ct) =>
+        {
+            if (UserId(principal) is not { } id || await db.Users.FindAsync([id], ct) is not { } user) return Results.Unauthorized();
+            if (!tickets.TryConsume(req.Ticket, user.Email, "delete")) return Error(400, "Confirma con el código que te enviamos por correo.");
+            db.Users.Remove(user);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
         });
 
         // Changing the password signs out every other device and returns a fresh session for this one.

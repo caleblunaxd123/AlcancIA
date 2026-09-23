@@ -2,6 +2,7 @@ using AlcancIA.Application.Ai;
 using AlcancIA.Infrastructure.Ai;
 using AlcancIA.Infrastructure.Persistence;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,9 +65,13 @@ public static class DependencyInjection
             if (!string.IsNullOrWhiteSpace(connection)) options.UseNpgsql(connection);
         });
 
-        services.AddDataProtection()
+        var dataProtection = services.AddDataProtection()
             .SetApplicationName("AlcancIA")
             .PersistKeysToDbContext<AppDbContext>();
+
+        // Key ring encrypted with a master key kept outside the database (required in production).
+        if (MasterKeyXmlEncryptor.ReadMasterKey(config) is { } masterKey)
+            dataProtection.Services.Configure<KeyManagementOptions>(o => o.XmlEncryptor = new MasterKeyXmlEncryptor(masterKey));
 
         return services;
     }

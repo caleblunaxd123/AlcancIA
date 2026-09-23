@@ -22,6 +22,7 @@ public sealed record SyncPush(long BaseVersion, DateTimeOffset ClientUpdatedAt, 
 public static class SyncEndpoints
 {
     public const int MaxDocumentBytes = 2 * 1024 * 1024;
+    public const string ProtectorPurpose = "AlcancIA.UserData.v1";
 
     public static void MapSyncEndpoints(this WebApplication app)
     {
@@ -77,7 +78,7 @@ public static class SyncEndpoints
         }).WithMetadata(new RequestSizeLimitAttribute(MaxDocumentBytes + 64 * 1024));
     }
 
-    private static IDataProtector Protector(IDataProtectionProvider dp) => dp.CreateProtector("AlcancIA.UserData.v1");
+    private static IDataProtector Protector(IDataProtectionProvider dp) => dp.CreateProtector(ProtectorPurpose);
 
     private static SyncDocument ToDocument(UserData row, IDataProtector protector)
     {

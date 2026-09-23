@@ -51,7 +51,7 @@ public sealed class EmailVerification(IVerificationMailer mailer, TimeProvider c
     public static string Normalize(string email) => email.Trim().ToLowerInvariant();
     public static bool Valid(string? email, string? purpose) => email is { Length: <= 254 }
         && MailAddress.TryCreate(email, out var address) && address.Address == email
-        && purpose is "register" or "recover" or "verify";
+        && purpose is "register" or "recover" or "verify" or "delete";
 
     public async Task<(int Status, object Body)> Request(string email, string purpose, CancellationToken ct)
     {

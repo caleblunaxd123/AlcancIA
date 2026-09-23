@@ -1,0 +1,7 @@
+**/bin/
+**/obj/
+**/*.user
+AlcancIA.Tests/
+**/appsettings.Development.json
+**/secrets.json
+.vs/
