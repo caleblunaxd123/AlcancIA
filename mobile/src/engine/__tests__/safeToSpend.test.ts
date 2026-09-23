@@ -83,4 +83,26 @@ describe('calculateSafeToSpend', () => {
     // 1800 - 60 savings - 100 buffer = 1640
     expect(result.amount.minor).toBe(164000);
   });
+
+  it('lists fixed payments due after the next income as covered by it (not silently dropped)', () => {
+    const snap = baseSnapshot();
+    snap.income[0]!.nextDate = '2026-09-30';
+    snap.goals = [];
+    const result = calculateSafeToSpend(snap, new Date('2026-09-23T12:00:00'));
+    // Rent (day 5) is not reserved from today's money…
+    expect(result.breakdown.some((l) => l.key.startsWith('obligation-rent'))).toBe(false);
+    // …but it is reported, with its real date, as paid by the next income.
+    expect(result.coveredByNextIncome).toEqual([
+      { key: 'covered-rent', label: 'Alquiler', amount: fromMajor(900), dueDate: '2026-10-05' },
+    ]);
+  });
+
+  it('does not list a payment as covered when it is already reserved', () => {
+    const snap = baseSnapshot();
+    snap.income[0]!.nextDate = '2026-09-30';
+    snap.recurring[0]!.dayOfMonth = 28;
+    const result = calculateSafeToSpend(snap, new Date('2026-09-23T12:00:00'));
+    expect(result.breakdown.some((l) => l.key === 'obligation-rent')).toBe(true);
+    expect(result.coveredByNextIncome).toHaveLength(0);
+  });
 });

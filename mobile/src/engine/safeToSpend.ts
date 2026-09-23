@@ -13,7 +13,7 @@ import { nextOccurrence, occurrencesBetween, recurrenceAnchor } from './recurren
 import { CATEGORIES } from '@/constants/categories';
 import type { CurrencyCode, Money } from '@/types/money';
 import type { FinancialSnapshot } from '@/types/domain';
-import { addDays, daysBetween, nextDayOfMonth, parseISO } from '@/utils/date';
+import { addDays, daysBetween, nextDayOfMonth, parseISO, toISODate } from '@/utils/date';
 
 export type SafeToSpendLine = {
   key: string;
@@ -33,6 +33,12 @@ export type SafeToSpendResult = {
   daysUntilIncome: number;
   nextIncomeDate: string | null;
   breakdown: SafeToSpendLine[];
+  /**
+   * Fixed payments due in the month AFTER the next income. They are not
+   * reserved from today's money (that income covers them), but the UI must
+   * say so — otherwise a S/ 1,000 rent seems to be ignored.
+   */
+  coveredByNextIncome: { key: string; label: string; amount: Money; dueDate: string }[];
 };
 
 const DEFAULT_ESSENTIAL_MONTHLY_ESTIMATE = 0;
@@ -109,9 +115,17 @@ export function calculateSafeToSpend(
   const obligations = snapshot.recurring.filter(
     (r) => r.kind === 'expense' && r.essential,
   );
+  const coveredByNextIncome: SafeToSpendResult['coveredByNextIncome'] = [];
+  const coverageEnd = addDays(periodEnd, 31);
   for (const o of obligations) {
     const anchorDate = o.nextDate ?? recurrenceAnchor(o.dayOfMonth ?? 15, asOf);
     const occurrences = occurrencesBetween({ frequency: o.frequency, anchorDate }, asOf, periodEnd);
+    if (occurrences.length === 0 && nextIncome) {
+      const later = occurrencesBetween({ frequency: o.frequency, anchorDate }, addDays(periodEnd, 1), coverageEnd)[0];
+      if (later) {
+        coveredByNextIncome.push({ key: `covered-${o.id}`, label: o.description, amount: o.amount, dueDate: toISODate(later) });
+      }
+    }
     occurrences.forEach((due, index) => {
       available = subtract(available, o.amount);
       breakdown.push({
@@ -206,5 +220,6 @@ export function calculateSafeToSpend(
     daysUntilIncome,
     nextIncomeDate: nextIncome ? nextIncome.income.nextDate : null,
     breakdown,
+    coveredByNextIncome,
   };
 }

@@ -1,4 +1,4 @@
-import { buildSnapshotFromOnboarding, emptySnapshot } from '@/engine/onboarding';
+import { buildSnapshotFromOnboarding, emptySnapshot, nextPayDateISO } from '@/engine/onboarding';
 import { calculateSafeToSpend } from '@/engine/safeToSpend';
 import { EMPTY_ONBOARDING, type OnboardingAnswers } from '@/types/onboarding';
 
@@ -15,6 +15,16 @@ describe('buildSnapshotFromOnboarding', () => {
     expect(snap.income).toHaveLength(1);
     expect(snap.income[0]!.amount.minor).toBe(350000);
     expect(snap.income[0]!.nextDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('keeps the payday the user picked (día 30 is not rewritten to 28)', () => {
+    const now = new Date('2026-09-23T12:00:00');
+    expect(nextPayDateISO(30, now)).toBe('2026-09-30');
+    expect(nextPayDateISO(5, now)).toBe('2026-10-05');
+    // Short month: clamps to its last day only for that month.
+    expect(nextPayDateISO(30, new Date('2026-02-10T12:00:00'))).toBe('2026-02-28');
+    const snap = buildSnapshotFromOnboarding(answers({ monthlyIncome: 3000, payDay: 30 }), now);
+    expect(snap.income[0]!.nextDate).toBe('2026-09-30');
   });
 
   it('maps chosen obligations to essential recurring expenses', () => {

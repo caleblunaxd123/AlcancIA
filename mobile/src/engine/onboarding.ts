@@ -3,16 +3,19 @@
  * so a first-time user immediately sees THEIR money — not demo data (§26).
  */
 import { fromMajor } from './money';
+import { recurrenceAnchor } from './recurrence';
 import type { FinancialSnapshot, Income, RecurringTransaction, Goal } from '@/types/domain';
 import type { OnboardingAnswers } from '@/types/onboarding';
-import { nextDayOfMonth, toISODate } from '@/utils/date';
 
-function nextPayDateISO(payDay: number, from: Date = new Date()): string {
-  const safeDay = Math.min(28, Math.max(1, Math.round(payDay)));
-  return toISODate(nextDayOfMonth(safeDay, from));
+/**
+ * Next pay date for the day the user picked. Short months clamp to their last
+ * day (a "día 30" payday is Feb 28), but the user's choice is never rewritten.
+ */
+export function nextPayDateISO(payDay: number, from: Date = new Date()): string {
+  return recurrenceAnchor(Math.round(payDay), from);
 }
 
-export function buildSnapshotFromOnboarding(answers: OnboardingAnswers): FinancialSnapshot {
+export function buildSnapshotFromOnboarding(answers: OnboardingAnswers, now: Date = new Date()): FinancialSnapshot {
   const income: Income[] = answers.monthlyIncome > 0
     ? [
         {
@@ -20,7 +23,7 @@ export function buildSnapshotFromOnboarding(answers: OnboardingAnswers): Financi
           amount: fromMajor(answers.monthlyIncome),
           description: 'Ingreso principal',
           frequency: 'monthly',
-          nextDate: nextPayDateISO(answers.payDay),
+          nextDate: nextPayDateISO(answers.payDay, now),
         },
       ]
     : [];

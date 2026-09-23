@@ -9,8 +9,9 @@ import { Icon } from '@/components/common/Icon';
 import { Text } from '@/components/common/Text';
 import { MoneyCounter } from './MoneyCounter';
 import { formatMoney, toMajor } from '@/engine/money';
-import type { SafeToSpendResult } from '@/engine/safeToSpend';
+import type { SafeToSpendLine, SafeToSpendResult } from '@/engine/safeToSpend';
 import { useTheme } from '@/theme';
+import { formatDayMonth } from '@/utils/date';
 
 export type SafeToSpendCardProps = {
   result: SafeToSpendResult;
@@ -72,6 +73,17 @@ export function SafeToSpendCard({ result, onAskCanIBuy }: SafeToSpendCardProps) 
   );
 }
 
+/** Plain-language reason for each line, instead of "Confirmado/Programado". */
+function lineCaption(line: SafeToSpendLine): string {
+  if (line.key === 'balance') return 'Lo que tienes hoy';
+  if (line.key === 'buffer') return 'Colchón para imprevistos';
+  if (line.key === 'savings') return 'Para tus metas de ahorro';
+  if (line.key === 'essentials') return 'Estimado según tus gastos de comida y transporte';
+  if (line.key === 'subscriptions') return 'Se renuevan antes de tu ingreso';
+  if (line.key.startsWith('debt-')) return 'Cuota que vence antes de tu ingreso';
+  return 'Vence antes de tu próximo ingreso';
+}
+
 /**
  * "¿Cómo lo calculamos?" — itemizes every line the deterministic engine used,
  * so the user can always see why their safe-to-spend is what it is (§85).
@@ -106,9 +118,7 @@ export function SafeToSpendBreakdownSheet({
           >
             <View style={{ flex: 1 }}>
               <Text variant="bodyStrong">{line.label}</Text>
-              <Text variant="caption" color="muted">
-                {line.certainty === 'real' ? 'Confirmado' : line.certainty === 'scheduled' ? 'Programado' : 'Estimado'}
-              </Text>
+              <Text variant="caption" color="muted">{lineCaption(line)}</Text>
             </View>
             <Text
               variant="moneySmall"
@@ -132,6 +142,34 @@ export function SafeToSpendBreakdownSheet({
             {formatMoney(result.amount)}
           </Text>
         </View>
+
+        {result.coveredByNextIncome.length > 0 ? (
+          <View
+            style={{
+              marginTop: theme.spacing.lg,
+              padding: theme.spacing.md,
+              borderRadius: theme.radius.lg,
+              backgroundColor: theme.colors.surface.secondary,
+              gap: theme.spacing.sm,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
+              <Icon name="calendar-check" size={16} color="brand" />
+              <Text variant="bodyStrong">Los paga tu próximo ingreso</Text>
+            </View>
+            <Text variant="caption" color="secondary">
+              Vencen después de que cobres{result.nextIncomeDate ? ` (${formatDayMonth(result.nextIncomeDate)})` : ''}, así que no los descontamos de lo que tienes hoy.
+            </Text>
+            {result.coveredByNextIncome.map((p) => (
+              <View key={p.key} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text variant="body">
+                  {p.label} · {formatDayMonth(p.dueDate)}
+                </Text>
+                <Text variant="moneySmall">{formatMoney(p.amount, { hideDecimalsWhenRound: true })}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
     </BottomSheet>
   );
 }
