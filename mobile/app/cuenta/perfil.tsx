@@ -16,21 +16,24 @@ export default function ProfileSettings() {
   const router = useRouter();
   const theme = useTheme();
   const account = useAuthStore((state) => state.account);
-  const updateProfile = useAuthStore((state) => state.updateProfile);
+  const updateName = useAuthStore((state) => state.updateName);
   const changePassword = useAuthStore((state) => state.changePassword);
   const setAppName = useAppStore((state) => state.setName);
   const [name, setName] = useState(account?.name ?? '');
-  const [email, setEmail] = useState(account?.email ?? '');
   const [profileError, setProfileError] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const usesPassword = account?.provider !== 'google';
 
-  const saveProfile = () => {
+  const saveProfile = async () => {
     setProfileError('');
-    const result = updateProfile({ name, email });
+    setSavingProfile(true);
+    const result = await updateName(name);
+    setSavingProfile(false);
     if (!result.ok) return setProfileError(result.error);
     setAppName(name);
     Alert.alert('Perfil actualizado', 'Tus cambios ya se reflejan en AlcancIA.');
@@ -44,22 +47,26 @@ export default function ProfileSettings() {
     setLoading(false);
     if (!result.ok) return setPasswordError(result.error);
     setCurrentPassword(''); setPassword(''); setConfirm('');
-    Alert.alert('Contraseña actualizada', 'La próxima vez que inicies sesión usarás la nueva contraseña.');
+    Alert.alert('Contraseña actualizada', 'Cerramos tu sesión en tus otros dispositivos por seguridad.');
   };
 
   return (
     <Screen keyboardAware edges={{ top: true }}>
       <ScrollView contentContainerStyle={{ padding: theme.spacing.xl, gap: theme.spacing.xl, paddingBottom: theme.spacing.huge }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <PageHeader title="Mi perfil" subtitle="Tu nombre, correo y contraseña" onBack={() => router.back()} />
+        <PageHeader title="Mi perfil" subtitle={usesPassword ? 'Tu nombre, correo y contraseña' : 'Tu nombre y correo'} onBack={() => router.back()} />
         <Card>
           <Text variant="subtitle" style={{ marginBottom: theme.spacing.lg }}>Datos personales</Text>
           <View style={{ gap: theme.spacing.lg }}>
-            <TextField label="Nombre" value={name} onChangeText={setName} autoCapitalize="words" />
-            <TextField label="Correo electrónico" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" error={profileError || undefined} />
-            <Button label="Guardar perfil" variant="secondary" icon="save" fullWidth onPress={saveProfile} />
+            <TextField label="Nombre" value={name} onChangeText={setName} autoCapitalize="words" error={profileError || undefined} />
+            <View>
+              <Text variant="label" color="secondary">Correo electrónico</Text>
+              <Text variant="body" style={{ marginTop: theme.spacing.xs }}>{account?.email}</Text>
+              <Text variant="caption" color="muted">{account?.emailVerifiedAt ? 'Verificado' : 'Sin verificar'}{account?.provider === 'google' ? ' · Cuenta de Google' : ''}</Text>
+            </View>
+            <Button label="Guardar perfil" variant="secondary" icon="save" fullWidth loading={savingProfile} onPress={saveProfile} />
           </View>
         </Card>
-        <Card>
+        {usesPassword ? <Card>
           <Text variant="subtitle">Cambiar contraseña</Text>
           <Text variant="caption" color="secondary" style={{ marginTop: theme.spacing.xs, marginBottom: theme.spacing.lg }}>Necesitamos tu contraseña actual antes de reemplazarla.</Text>
           <View style={{ gap: theme.spacing.lg }}>
@@ -68,7 +75,7 @@ export default function ProfileSettings() {
             <TextField label="Confirmar nueva contraseña" value={confirm} onChangeText={setConfirm} secureTextEntry autoCapitalize="none" error={passwordError || undefined} />
             <Button label="Actualizar contraseña" icon="key-round" fullWidth loading={loading} onPress={savePassword} />
           </View>
-        </Card>
+        </Card> : null}
         <Text variant="caption" color="muted" center>Tu contraseña nunca se almacena en texto legible.</Text>
       </ScrollView>
     </Screen>

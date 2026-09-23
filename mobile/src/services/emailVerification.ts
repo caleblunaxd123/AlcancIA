@@ -2,7 +2,7 @@ import { API_BASE_URL } from '@/constants/config';
 
 /**
  * One-time email codes (backend `/api/email/*`). Proves the user controls the
- * address before creating the device account or resetting its password. The
+ * address; the returned ticket lets the server create the account or reset it. The
  * code itself is never stored or logged on the device.
  */
 export type EmailCodePurpose = 'register' | 'recover';
@@ -11,7 +11,8 @@ export type RequestCodeResult =
   | { ok: true; challengeId: string; resendAfterSeconds: number }
   | { ok: false; error: string };
 
-export type VerifyCodeResult = { ok: true } | { ok: false; error: string };
+/** `ticket` is the server's proof of the verified code, required to register or reset. */
+export type VerifyCodeResult = { ok: true; ticket: string } | { ok: false; error: string };
 
 const TIMEOUT_MS = 15000;
 const OFFLINE_ERROR = 'No pudimos conectar con AlcancIA para enviar el código. Revisa tu conexión e inténtalo de nuevo.';
@@ -65,7 +66,7 @@ export async function verifyEmailCode(input: {
       purpose: input.purpose,
       code,
     });
-    if (status === 200 && data.verified === true) return { ok: true };
+    if (status === 200 && data.verified === true && typeof data.ticket === 'string') return { ok: true, ticket: data.ticket };
     if (status === 429) return { ok: false, error: 'Demasiados intentos. Espera unos minutos.' };
     return { ok: false, error: serverError(data, 'El código no es válido o venció. Pide uno nuevo.') };
   } catch {

@@ -41,11 +41,12 @@ con backend opcional.
   Keychain/Keystore mediante SecureStore (con migración desde AsyncStorage).
 - **Accesibilidad**: reduced-motion, roles/labels, estados de error, modales
   semánticos, sliders operables y touch targets ≥44px.
-- **Cuenta local segura**: registro manual, login, cierre de sesión conservando datos
-  y recuperación mediante respuesta protegida. Contraseñas y respuestas se guardan
-  únicamente como hashes con sales aleatorias dentro de Keychain/Keystore.
-- **Perfil y acceso**: nombre/correo editables y cambio de contraseña con verificación
-  de la contraseña actual.
+- **Cuentas en la nube**: registro con código por correo, login, Google (verificado
+  en servidor), recuperación por correo y cambio de contraseña que cierra las demás
+  sesiones. Sesiones JWT + refresh rotativo; contraseñas con PBKDF2 en el servidor.
+- **Sincronización offline-first**: la app funciona sin internet y respalda tus datos
+  cifrados en el servidor; al entrar desde otro celular los ves igual. Las cuentas
+  creadas antes se activan en la nube con un código, sin perder datos.
 - **Edición segura**: movimientos manuales, metas, deudas y suscripciones pueden
   actualizarse sin perder progreso ni desbalancear el saldo. Operaciones enlazadas
   permanecen protegidas.
@@ -54,8 +55,8 @@ con backend opcional.
 
 ### Pendiente para producción
 
-Autenticación remota e identidad verificada, sincronización multi-dispositivo, hogares compartidos
-con autorización de servidor, OCR de comprobantes, telemetría/crash reporting y
+Hogares compartidos con autorización de servidor, merge de sincronización por
+entidad, borrado/exportación de cuenta, HTTPS y despliegue, OCR de comprobantes, telemetría/crash reporting y
 credenciales reales del proveedor de IA. Ver [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
@@ -65,20 +66,31 @@ credenciales reales del proveedor de IA. Ver [docs/ROADMAP.md](docs/ROADMAP.md).
 ```
 AlcancIA/
   mobile/            App React Native (Expo + Expo Router + TypeScript strict)
-  backend/           API .NET 9 — IAiProvider + chat (Clean Architecture)
+  backend/           API .NET 9 — cuentas, sync cifrado e IA (EF Core + PostgreSQL)
   docs/              Documentación de producto, diseño y arquitectura
 ```
 
-## Cómo ejecutar el backend (opcional, para chat con IA)
+## Cómo ejecutar el backend
 
 ```bash
+docker compose up -d db                      # PostgreSQL local en 127.0.0.1:5440
 cd backend
-dotnet run --project AlcancIA.Api --urls http://localhost:5080
+# Secretos locales (una vez; se guardan fuera del repo):
+dotnet user-secrets set "ConnectionStrings:Database" "Host=127.0.0.1;Port=5440;Database=alcancia;Username=alcancia;Password=alcancia_local_dev" --project AlcancIA.Api
+dotnet user-secrets set "Auth:SigningKey" "<64+ caracteres aleatorios>" --project AlcancIA.Api
+dotnet user-secrets set "Email:Username" "tu-cuenta@gmail.com" --project AlcancIA.Api
+dotnet user-secrets set "Email:Password" "<contraseña de aplicación>" --project AlcancIA.Api
+dotnet user-secrets set "Auth:GoogleClientIds:0" "<client id de Android>" --project AlcancIA.Api
+dotnet ef database update --project AlcancIA.Infrastructure --startup-project AlcancIA.Api
+dotnet run --project AlcancIA.Api --urls http://0.0.0.0:5080
 ```
 
-`GET /health` y `POST /api/ai/chat`. Sin API key de Gemini responde con el motor
-determinístico local. Para el emulador Android: `adb reverse tcp:5080 tcp:5080`.
-Detalles en [docs/AI.md](docs/AI.md). La app funciona igual **sin** el backend.
+Endpoints: `/api/auth/*` (registro, login, Google, refresh, logout, recuperación, perfil),
+`/api/email/*` (códigos), `/api/sync` (datos cifrados) y `/api/ai/chat` (ver
+[docs/AI.md](docs/AI.md)). Para el emulador Android: `adb reverse tcp:5080 tcp:5080`.
+Tests: `dotnet test` usa SQLite en memoria; con
+`ALCANCIA_TEST_PG="Host=127.0.0.1;Port=5440;Username=alcancia;Password=alcancia_local_dev"`
+corre todo contra PostgreSQL real, incluidas las pruebas de concurrencia.
 
 ## Cómo ejecutar la app
 

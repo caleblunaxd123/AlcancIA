@@ -6,14 +6,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Text } from '@/components/common/Text';
-import {
-  fetchFacebookProfile,
-  fetchGoogleProfile,
-  isFacebookConfigured,
-  isGoogleConfigured,
-  socialConfig,
-} from '@/services/socialAuth';
-import type { SocialProfile } from '@/store/authStore';
+import { isFacebookConfigured, isGoogleConfigured, socialConfig } from '@/services/socialAuth';
 import { useTheme } from '@/theme';
 
 // Closes the in-app browser tab when the OAuth redirect comes back.
@@ -95,9 +88,9 @@ function ProviderButton({
   );
 }
 
-type ChildProps = { onProfile: (p: SocialProfile) => void; onError: (message: string) => void; busy: boolean; setBusy: (b: boolean) => void };
+type ChildProps = { onGoogleToken: (accessToken: string) => Promise<void>; onError: (message: string) => void; busy: boolean; setBusy: (b: boolean) => void };
 
-function GoogleButton({ onProfile, onError, busy, setBusy }: ChildProps) {
+function GoogleButton({ onGoogleToken, onError, busy, setBusy }: ChildProps) {
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: socialConfig.google.androidClientId || undefined,
     iosClientId: socialConfig.google.iosClientId || undefined,
@@ -121,11 +114,9 @@ function GoogleButton({ onProfile, onError, busy, setBusy }: ChildProps) {
       onError('Google no devolvió un acceso válido.');
       return;
     }
-    fetchGoogleProfile(token)
-      .then(onProfile)
-      .catch(() => onError('No pudimos leer tu perfil de Google. Revisa tu conexión.'))
-      .finally(() => setBusy(false));
-  }, [response, onProfile, onError, setBusy]);
+    // The server verifies this token with Google and opens the session.
+    onGoogleToken(token).finally(() => setBusy(false));
+  }, [response, onGoogleToken, onError, setBusy]);
 
   return (
     <ProviderButton
@@ -141,7 +132,7 @@ function GoogleButton({ onProfile, onError, busy, setBusy }: ChildProps) {
   );
 }
 
-function FacebookButton({ onProfile, onError, busy, setBusy }: ChildProps) {
+function FacebookButton({ onError, busy, setBusy }: ChildProps) {
   const [request, response, promptAsync] = Facebook.useAuthRequest({
     clientId: socialConfig.facebookAppId,
     scopes: ['public_profile', 'email'],
@@ -157,17 +148,10 @@ function FacebookButton({ onProfile, onError, busy, setBusy }: ChildProps) {
       if (response.type === 'error') onError('Facebook no pudo completar el inicio de sesión.');
       return;
     }
-    const token = response.authentication?.accessToken ?? response.params?.access_token;
-    if (!token) {
-      setBusy(false);
-      onError('Facebook no devolvió un acceso válido.');
-      return;
-    }
-    fetchFacebookProfile(token)
-      .then(onProfile)
-      .catch(() => onError('No pudimos leer tu perfil de Facebook. Revisa tu conexión.'))
-      .finally(() => setBusy(false));
-  }, [response, onProfile, onError, setBusy]);
+    // Server-side verification for Facebook is not implemented yet.
+    setBusy(false);
+    onError('Pronto podrás entrar con Facebook. Por ahora usa Google o tu correo.');
+  }, [response, onError, setBusy]);
 
   return (
     <ProviderButton
@@ -188,12 +172,12 @@ function FacebookButton({ onProfile, onError, busy, setBusy }: ChildProps) {
  * mounted when its client id exists (the hooks throw otherwise).
  */
 export function SocialAuthButtons({
-  onProfile,
+  onGoogleToken,
   onError,
   dividerLabel = 'o continúa con',
   dividerFirst = true,
 }: {
-  onProfile: (p: SocialProfile) => void;
+  onGoogleToken: (accessToken: string) => Promise<void>;
   onError: (message: string) => void;
   dividerLabel?: string;
   /** Login: divider above the buttons. Sign-up: buttons first, divider below. */
@@ -216,10 +200,10 @@ export function SocialAuthButtons({
       {dividerFirst ? divider : null}
       <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
         {isGoogleConfigured() ? (
-          <GoogleButton onProfile={onProfile} onError={onError} busy={busy === 'google'} setBusy={(b) => setBusy(b ? 'google' : null)} />
+          <GoogleButton onGoogleToken={onGoogleToken} onError={onError} busy={busy === 'google'} setBusy={(b) => setBusy(b ? 'google' : null)} />
         ) : null}
         {isFacebookConfigured() ? (
-          <FacebookButton onProfile={onProfile} onError={onError} busy={busy === 'facebook'} setBusy={(b) => setBusy(b ? 'facebook' : null)} />
+          <FacebookButton onGoogleToken={onGoogleToken} onError={onError} busy={busy === 'facebook'} setBusy={(b) => setBusy(b ? 'facebook' : null)} />
         ) : null}
       </View>
       {dividerFirst ? null : divider}

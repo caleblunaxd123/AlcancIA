@@ -1,6 +1,6 @@
 # WORK_PROGRESS.md — Continuidad del trabajo (§34)
 
-_Última actualización: 2026-09-22. Si el contexto se compacta: leer este archivo y continuar desde "Siguiente tarea"._
+_Última actualización: 2026-09-23. Si el contexto se compacta: leer este archivo y continuar desde "Siguiente tarea"._
 
 ## Qué se auditó
 
@@ -69,6 +69,13 @@ dotnet user-secrets set "Email:Username" "tu-cuenta@gmail.com" --project AlcancI
 dotnet user-secrets set "Email:Password" "<contraseña de aplicación de 16 letras>" --project AlcancIA.Api
 ```
 Pendiente: probar en el emulador el envío real de correos (necesita la contraseña de aplicación) y el recorrido del onboarding corregido.
+
+### Base de datos, cuentas en la nube y sincronización (2026-09-23)
+Decisiones del usuario: PostgreSQL en Docker · datos cifrados en servidor · offline + sincroniza · cuentas + datos (sin households aún).
+- Backend: EF Core + Npgsql (`AppDbContext`: users, refresh_tokens, user_data, data_protection_keys), migración `InitialAccounts`. `TokenService` (JWT 15 min + refresh rotativo, reclamo atómico), `VerificationTickets` (ticket de correo verificado), `GoogleTokenVerifier`, endpoints `/api/auth/*` y `/api/sync` (409 con la copia del servidor). `docker-compose.yml` (puerto 5440; el 5432 lo usa otro proyecto).
+- Tests backend: 59 (SQLite en memoria; 3 de concurrencia solo con `ALCANCIA_TEST_PG`). Todos verdes contra PostgreSQL real; las carreras encontraron (y se corrigió) la emisión de varias sesiones con un mismo refresh token.
+- App: `services/apiClient.ts` (refresh single-flight, offline distinto de rechazado), `authStore` v2 (servidor; cuentas legacy se activan con código), `services/sync.ts` + `syncStore` (ownerId por usuario, push 2.5 s tras editar, pull al iniciar/volver, gana la edición más reciente con aviso), `useSyncEngine`, `SyncStatusLine` en Mi cuenta. Registro sin palabra de recuperación (se recupera por correo). Tests con servidor falso (`src/test/fakeApi.ts`): 171 verdes.
+- Verificado en emulador: la cuenta creada antes abre igual tras la actualización y Mi cuenta muestra "Solo en este celular". Pendiente (requiere contraseña + código del usuario): activarla en la nube y ver "Respaldado en la nube".
 
 ## Comandos importantes
 

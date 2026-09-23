@@ -3,46 +3,63 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { secureFinancialStorage } from './secureStorage';
-import { createId } from '@/utils/id';
+import {
+  authRequest,
+  clearSession,
+  getRefreshToken,
+  publicRequest,
+  saveSession,
+  type ServerSession,
+  type ServerUser,
+} from '@/services/apiClient';
 import { normalizeEmail, validateEmail, validatePassword } from '@/utils/authValidation';
 
 export type AuthProvider = 'password' | 'google' | 'facebook';
 
-type LocalAccount = {
+/**
+ * The signed-in person. Cloud accounts carry `serverId`. Accounts created by
+ * older versions live only on this device (no `serverId`, local password hash);
+ * they keep working and can be activated in the cloud with an email code.
+ */
+export type Account = {
   id: string;
-  /** How the owner signs in. Missing on accounts created before social login (= password). */
+  serverId?: string;
   provider?: AuthProvider;
-  /** Stable id from Google/Facebook for social accounts. */
-  providerUserId?: string;
   name: string;
   email: string;
-  passwordHash: string;
-  passwordSalt: string;
-  recoveryHash: string;
-  recoverySalt: string;
-  /** When the owner proved control of `email` with a one-time code. */
   emailVerifiedAt?: string;
   createdAt: string;
+  /** Legacy local-only credentials (pre-cloud). Dropped once activated. */
+  passwordHash?: string;
+  passwordSalt?: string;
+  recoveryHash?: string;
+  recoverySalt?: string;
 };
 
-type AuthResult = { ok: true } | { ok: false; error: string };
-
-export type SocialProfile = { provider: Exclude<AuthProvider, 'password'>; providerUserId: string; name: string; email?: string };
+export type AuthResult = { ok: true } | { ok: false; error: string };
+/** Login can also ask to activate a legacy device account in the cloud. */
+export type LoginResult = AuthResult | { ok: false; error: string; needsActivation: true };
 
 type AuthState = {
-  account: LocalAccount | null;
+  account: Account | null;
   authenticated: boolean;
   hydrated: boolean;
-  register: (input: { name: string; email: string; password: string; recoveryAnswer: string; emailVerifiedAt?: string }) => Promise<AuthResult>;
-  login: (email: string, password: string) => Promise<AuthResult>;
-  /** Sign in (or create the device account) with a verified Google/Facebook profile. */
-  socialSignIn: (profile: SocialProfile) => AuthResult;
-  resetPassword: (input: { email: string; recoveryAnswer: string; password: string }) => Promise<AuthResult>;
-  /** Reset after the email code was verified by the server (no recovery word needed). */
-  resetPasswordWithVerifiedEmail: (input: { email: string; password: string }) => Promise<AuthResult>;
-  updateProfile: (input: { name: string; email: string }) => AuthResult;
+  /** Create a cloud account. `ticket` proves the email code was verified. */
+  register: (input: { name: string; email: string; password: string; ticket: string }) => Promise<AuthResult>;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  /** Legacy device account → cloud account with the same email/password (code-verified). */
+  activateInCloud: (input: { password: string; ticket: string }) => Promise<AuthResult>;
+  /** Google sign-in: the server verifies the token with Google. */
+  googleSignIn: (accessToken: string) => Promise<AuthResult>;
+  /** Reset with an email-code ticket (cloud accounts). Signs out everywhere. */
+  resetPassword: (input: { email: string; password: string; ticket: string }) => Promise<AuthResult>;
+  /** Offline fallback for legacy device accounts: the recovery word. */
+  resetPasswordWithWord: (input: { email: string; recoveryAnswer: string; password: string }) => Promise<AuthResult>;
+  updateName: (name: string) => Promise<AuthResult>;
   changePassword: (input: { currentPassword: string; password: string }) => Promise<AuthResult>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  /** The server rejected our refresh token (revoked elsewhere): drop to login. */
+  sessionLost: () => void;
 };
 
 const randomSalt = async () => {
@@ -53,162 +70,140 @@ const randomSalt = async () => {
 const hashSecret = (value: string, salt: string) =>
   Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, `${salt}:${value.normalize('NFKC')}`);
 
+const fromServer = (user: ServerUser, previous: Account | null): Account => ({
+  id: user.id,
+  serverId: user.id,
+  provider: user.provider,
+  name: user.name,
+  email: user.email,
+  emailVerifiedAt: user.emailVerifiedAt ?? undefined,
+  createdAt: previous?.serverId === user.id ? previous.createdAt : new Date().toISOString(),
+});
+
+export const isLegacyAccount = (account: Account | null): boolean =>
+  account != null && !account.serverId && !!account.passwordHash;
+
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
-      account: null,
-      authenticated: false,
-      hydrated: false,
-
-      register: async ({ name, email, password, recoveryAnswer, emailVerifiedAt }) => {
-        const cleanName = name.trim();
-        const cleanEmail = normalizeEmail(email);
-        if (cleanName.length < 2) return { ok: false, error: 'Escribe tu nombre.' };
-        const emailError = validateEmail(cleanEmail);
-        if (emailError) return { ok: false, error: emailError };
-        const passwordError = validatePassword(password);
-        if (passwordError) return { ok: false, error: passwordError };
-        if (recoveryAnswer.trim().length < 2) return { ok: false, error: 'Escribe tu respuesta de recuperación.' };
-        if (get().account) return { ok: false, error: 'Ya existe una cuenta en este dispositivo.' };
-
-        const [passwordSalt, recoverySalt] = await Promise.all([randomSalt(), randomSalt()]);
-        const [passwordHash, recoveryHash] = await Promise.all([
-          hashSecret(password, passwordSalt),
-          hashSecret(recoveryAnswer.trim().toLowerCase(), recoverySalt),
-        ]);
-        set({
-          account: {
-            id: createId('user'),
-            name: cleanName,
-            email: cleanEmail,
-            passwordHash,
-            passwordSalt,
-            recoveryHash,
-            recoverySalt,
-            emailVerifiedAt,
-            createdAt: new Date().toISOString(),
-          },
-          authenticated: true,
-        });
+    (set, get) => {
+      const start = async (session: ServerSession): Promise<AuthResult> => {
+        await saveSession(session);
+        set({ account: fromServer(session.user, get().account), authenticated: true });
         return { ok: true };
-      },
+      };
 
-      login: async (email, password) => {
-        const account = get().account;
-        if (!account) return { ok: false, error: 'No hay una cuenta registrada en este dispositivo.' };
-        if (account.provider && account.provider !== 'password') {
-          return { ok: false, error: `Esta cuenta entra con ${account.provider === 'google' ? 'Google' : 'Facebook'}. Usa ese botón.` };
-        }
-        const cleanEmail = normalizeEmail(email);
-        const candidate = await hashSecret(password, account.passwordSalt);
-        if (cleanEmail !== account.email || candidate !== account.passwordHash) {
-          return { ok: false, error: 'Correo o contraseña incorrectos.' };
-        }
-        set({ authenticated: true });
-        return { ok: true };
-      },
+      return {
+        account: null,
+        authenticated: false,
+        hydrated: false,
 
-      socialSignIn: (profile) => {
-        const account = get().account;
-        if (!profile.providerUserId) return { ok: false, error: 'No pudimos leer tu perfil. Intenta de nuevo.' };
-        if (account) {
-          const sameIdentity = account.provider === profile.provider && account.providerUserId === profile.providerUserId;
-          if (!sameIdentity) {
-            return { ok: false, error: 'En este celular ya hay otra cuenta de AlcancIA. Entra con tu correo y contraseña.' };
+        register: async ({ name, email, password, ticket }) => {
+          const cleanName = name.trim();
+          if (cleanName.length < 2) return { ok: false, error: 'Escribe tu nombre.' };
+          const emailError = validateEmail(normalizeEmail(email));
+          if (emailError) return { ok: false, error: emailError };
+          const passwordError = validatePassword(password);
+          if (passwordError) return { ok: false, error: passwordError };
+          const result = await publicRequest<ServerSession>('POST', '/api/auth/register', { name: cleanName, email: normalizeEmail(email), password, ticket });
+          return result.ok ? start(result.data) : { ok: false, error: result.error };
+        },
+
+        login: async (email, password) => {
+          const cleanEmail = normalizeEmail(email);
+          const result = await publicRequest<ServerSession>('POST', '/api/auth/login', { email: cleanEmail, password });
+          if (result.ok) return start(result.data);
+
+          // Not in the cloud yet? A matching legacy device account can be activated.
+          const legacy = get().account;
+          if (legacy && isLegacyAccount(legacy) && legacy.email === cleanEmail && legacy.passwordSalt
+            && (await hashSecret(password, legacy.passwordSalt)) === legacy.passwordHash) {
+            if (result.offline) {
+              set({ authenticated: true }); // still works offline, exactly as before
+              return { ok: true };
+            }
+            if (result.status === 401) {
+              return { ok: false, needsActivation: true, error: 'Activa tu cuenta en la nube para protegerla y usarla en otros celulares.' };
+            }
           }
-          set({ authenticated: true });
+          return { ok: false, error: result.error };
+        },
+
+        activateInCloud: async ({ password, ticket }) => {
+          const legacy = get().account;
+          if (!legacy || !isLegacyAccount(legacy)) return { ok: false, error: 'No hay una cuenta para activar en este dispositivo.' };
+          const result = await publicRequest<ServerSession>('POST', '/api/auth/register', { name: legacy.name, email: legacy.email, password, ticket });
+          return result.ok ? start(result.data) : { ok: false, error: result.error };
+        },
+
+        googleSignIn: async (accessToken) => {
+          const result = await publicRequest<ServerSession>('POST', '/api/auth/google', { accessToken });
+          return result.ok ? start(result.data) : { ok: false, error: result.error };
+        },
+
+        resetPassword: async ({ email, password, ticket }) => {
+          const passwordError = validatePassword(password);
+          if (passwordError) return { ok: false, error: passwordError };
+          const result = await publicRequest('POST', '/api/auth/reset-password', { email: normalizeEmail(email), password, ticket });
+          if (!result.ok) return { ok: false, error: result.error };
+          await clearSession();
+          set({ authenticated: false });
           return { ok: true };
-        }
-        set({
-          account: {
-            id: createId('user'),
-            provider: profile.provider,
-            providerUserId: profile.providerUserId,
-            name: profile.name.trim() || 'Tú',
-            email: profile.email ? normalizeEmail(profile.email) : '',
-            // Social accounts have no local password or recovery secret.
-            passwordHash: '',
-            passwordSalt: '',
-            recoveryHash: '',
-            recoverySalt: '',
-            createdAt: new Date().toISOString(),
-          },
-          authenticated: true,
-        });
-        return { ok: true };
-      },
+        },
 
-      resetPassword: async ({ email, recoveryAnswer, password }) => {
-        const account = get().account;
-        if (!account || normalizeEmail(email) !== account.email) {
-          return { ok: false, error: 'No encontramos esa cuenta en este dispositivo.' };
-        }
-        if (account.provider && account.provider !== 'password') {
-          return { ok: false, error: 'Esta cuenta no usa contraseña: entra con Google o Facebook.' };
-        }
-        const passwordError = validatePassword(password);
-        if (passwordError) return { ok: false, error: passwordError };
-        const recoveryHash = await hashSecret(recoveryAnswer.trim().toLowerCase(), account.recoverySalt);
-        if (recoveryHash !== account.recoveryHash) return { ok: false, error: 'La respuesta de recuperación no coincide.' };
-        const passwordSalt = await randomSalt();
-        const passwordHash = await hashSecret(password, passwordSalt);
-        set({ account: { ...account, passwordSalt, passwordHash }, authenticated: false });
-        return { ok: true };
-      },
+        resetPasswordWithWord: async ({ email, recoveryAnswer, password }) => {
+          const account = get().account;
+          if (!account || !isLegacyAccount(account) || normalizeEmail(email) !== account.email || !account.recoverySalt) {
+            return { ok: false, error: 'La palabra de recuperación solo sirve para cuentas creadas antes en este dispositivo.' };
+          }
+          const passwordError = validatePassword(password);
+          if (passwordError) return { ok: false, error: passwordError };
+          if ((await hashSecret(recoveryAnswer.trim().toLowerCase(), account.recoverySalt)) !== account.recoveryHash) {
+            return { ok: false, error: 'La palabra de recuperación no coincide.' };
+          }
+          const passwordSalt = await randomSalt();
+          set({ account: { ...account, passwordSalt, passwordHash: await hashSecret(password, passwordSalt) }, authenticated: false });
+          return { ok: true };
+        },
 
-      resetPasswordWithVerifiedEmail: async ({ email, password }) => {
-        const account = get().account;
-        if (!account || normalizeEmail(email) !== account.email) {
-          return { ok: false, error: 'No encontramos esa cuenta en este dispositivo.' };
-        }
-        if (account.provider && account.provider !== 'password') {
-          return { ok: false, error: 'Esta cuenta no usa contraseña: entra con Google o Facebook.' };
-        }
-        const passwordError = validatePassword(password);
-        if (passwordError) return { ok: false, error: passwordError };
-        const passwordSalt = await randomSalt();
-        const passwordHash = await hashSecret(password, passwordSalt);
-        set({
-          account: { ...account, passwordSalt, passwordHash, emailVerifiedAt: account.emailVerifiedAt ?? new Date().toISOString() },
-          authenticated: false,
-        });
-        return { ok: true };
-      },
+        updateName: async (name) => {
+          const account = get().account;
+          const cleanName = name.trim();
+          if (!account) return { ok: false, error: 'No hay una cuenta activa.' };
+          if (cleanName.length < 2) return { ok: false, error: 'Escribe tu nombre.' };
+          if (account.serverId) {
+            const result = await authRequest<ServerUser>('PUT', '/api/auth/me', { name: cleanName });
+            if (!result.ok) return { ok: false, error: result.error };
+          }
+          set({ account: { ...account, name: cleanName } });
+          return { ok: true };
+        },
 
-      updateProfile: ({ name, email }) => {
-        const account = get().account;
-        if (!account) return { ok: false, error: 'No hay una cuenta activa.' };
-        const cleanName = name.trim();
-        const cleanEmail = normalizeEmail(email);
-        if (cleanName.length < 2) return { ok: false, error: 'Escribe tu nombre.' };
-        const emailError = validateEmail(cleanEmail);
-        if (emailError) return { ok: false, error: emailError };
-        const emailVerifiedAt = cleanEmail === account.email ? account.emailVerifiedAt : undefined;
-        set({ account: { ...account, name: cleanName, email: cleanEmail, emailVerifiedAt } });
-        return { ok: true };
-      },
+        changePassword: async ({ currentPassword, password }) => {
+          const account = get().account;
+          if (!account?.serverId) return { ok: false, error: 'Activa tu cuenta en la nube para cambiar la contraseña.' };
+          const passwordError = validatePassword(password);
+          if (passwordError) return { ok: false, error: passwordError };
+          const result = await authRequest<ServerSession>('POST', '/api/auth/me/password', { currentPassword, password });
+          return result.ok ? start(result.data) : { ok: false, error: result.error };
+        },
 
-      changePassword: async ({ currentPassword, password }) => {
-        const account = get().account;
-        if (!account) return { ok: false, error: 'No hay una cuenta activa.' };
-        const currentHash = await hashSecret(currentPassword, account.passwordSalt);
-        if (currentHash !== account.passwordHash) return { ok: false, error: 'La contraseña actual no coincide.' };
-        const passwordError = validatePassword(password);
-        if (passwordError) return { ok: false, error: passwordError };
-        if (currentPassword === password) return { ok: false, error: 'La nueva contraseña debe ser diferente.' };
-        const passwordSalt = await randomSalt();
-        const passwordHash = await hashSecret(password, passwordSalt);
-        set({ account: { ...account, passwordSalt, passwordHash } });
-        return { ok: true };
-      },
+        logout: async () => {
+          const token = await getRefreshToken();
+          if (token) await publicRequest('POST', '/api/auth/logout', { refreshToken: token });
+          await clearSession();
+          set({ authenticated: false });
+        },
 
-      logout: () => set({ authenticated: false }),
-    }),
+        sessionLost: () => set({ authenticated: false }),
+      };
+    },
     {
       name: 'alcancia-auth',
       storage: createJSONStorage(() => secureFinancialStorage),
-      version: 1,
+      version: 2,
       partialize: ({ account, authenticated }) => ({ account, authenticated }),
+      // v1 accounts were device-only: they load as legacy (no serverId) and keep working.
+      migrate: (persisted) => persisted as { account: Account | null; authenticated: boolean },
     },
   ),
 );

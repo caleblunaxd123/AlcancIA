@@ -6,10 +6,13 @@ import { Icon } from '@/components/common/Icon';
 import { Screen } from '@/components/common/Screen';
 import { Text } from '@/components/common/Text';
 import { PageHeader } from '@/components/common/PageHeader';
+import { SyncStatusLine } from '@/components/common/SyncStatusLine';
+import { syncNow } from '@/services/sync';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
 import { useFinancialStore } from '@/store/financialStore';
 import { useSharedStore } from '@/store/sharedStore';
+import { useSyncStore } from '@/store/syncStore';
 import { useTheme, useThemePreference } from '@/theme';
 
 export default function Mas() {
@@ -33,7 +36,9 @@ export default function Mas() {
   ];
 
   const confirmReset = () => {
-    Alert.alert('Reiniciar AlcancIA', 'Se borrarán tus datos y volverás al inicio. ¿Continuar?', [
+    Alert.alert('Reiniciar AlcancIA', account?.serverId
+      ? 'Se borrarán tus datos en este celular y en tu respaldo en la nube, y volverás al inicio. ¿Continuar?'
+      : 'Se borrarán tus datos y volverás al inicio. ¿Continuar?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Reiniciar',
@@ -48,10 +53,27 @@ export default function Mas() {
     ]);
   };
 
-  const confirmLogout = () => {
-    Alert.alert('Cerrar sesión', 'Tus datos permanecerán guardados de forma segura en este dispositivo.', [
+  const signOut = async () => {
+    // Upload anything pending first, so nothing is lost on this device's sign-out.
+    await syncNow();
+    const pending = account?.serverId != null && useSyncStore.getState().dirty;
+    const finish = async () => {
+      await logout();
+      router.replace('/auth/login');
+    };
+    if (!pending) return finish();
+    Alert.alert('Hay cambios sin respaldar', 'No pudimos subir tus últimos cambios a la nube. Si cierras sesión ahora, quedarán solo en este celular hasta que vuelvas a entrar.', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Cerrar sesión', onPress: () => { logout(); } },
+      { text: 'Cerrar igual', style: 'destructive', onPress: () => void finish() },
+    ]);
+  };
+
+  const confirmLogout = () => {
+    Alert.alert('Cerrar sesión', account?.serverId
+      ? 'Tus datos están respaldados en la nube. Al volver a entrar, desde este u otro celular, los verás igual.'
+      : 'Tus datos permanecerán en este dispositivo.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Cerrar sesión', onPress: () => void signOut() },
     ]);
   };
 
@@ -69,6 +91,7 @@ export default function Mas() {
             <View style={{ flex: 1 }}>
               <Text variant="subtitle">{name || 'Tu perfil'}</Text>
               <Text variant="caption" color="muted">{account?.email ?? 'Cuenta local de AlcancIA'}</Text>
+              <SyncStatusLine />
             </View>
             <Icon name="chevron-right" size={20} color="muted" />
           </View>

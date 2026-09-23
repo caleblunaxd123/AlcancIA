@@ -1,35 +1,30 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 
+import { onSignedIn } from '@/services/sync';
 import { useAppStore } from '@/store/appStore';
-import { useAuthStore, type SocialProfile } from '@/store/authStore';
-import { useFinancialStore } from '@/store/financialStore';
-import { useSharedStore } from '@/store/sharedStore';
+import { useAuthStore } from '@/store/authStore';
 
 /**
- * Turns a Google/Facebook profile into a signed-in session. A brand-new account
- * starts clean (same as email sign-up) and goes through onboarding; a returning
- * one lands on Home. Callbacks are stable so provider effects don't re-run.
+ * Google sign-in: the server verifies the token and opens the session, then
+ * this device loads that user's data (a different previous user never leaks
+ * in). New accounts go through onboarding; returning ones land on Home.
+ * Callbacks are stable so provider effects don't re-run.
  */
 export function useSocialSignIn() {
   const router = useRouter();
   const [error, setError] = useState('');
 
-  const onProfile = useCallback(
-    (profile: SocialProfile) => {
-      const auth = useAuthStore.getState();
-      const isNewAccount = auth.account == null;
-      const result = auth.socialSignIn(profile);
+  const onGoogleToken = useCallback(
+    async (accessToken: string) => {
+      const result = await useAuthStore.getState().googleSignIn(accessToken);
       if (!result.ok) {
         setError(result.error);
         return;
       }
       setError('');
-      if (isNewAccount) {
-        useFinancialStore.getState().reset();
-        useSharedStore.getState().reset();
-        useAppStore.getState().resetOnboarding();
-      }
+      const userId = useAuthStore.getState().account?.serverId;
+      if (userId) await onSignedIn(userId);
       router.replace(useAppStore.getState().onboarded ? '/(tabs)' : '/onboarding');
     },
     [router],
@@ -37,5 +32,5 @@ export function useSocialSignIn() {
 
   const onError = useCallback((message: string) => setError(message), []);
 
-  return { onProfile, onError, error, clearError: () => setError('') };
+  return { onGoogleToken, onError, error, clearError: () => setError('') };
 }

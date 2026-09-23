@@ -9,7 +9,7 @@ import { Card } from '@/components/common/Card';
 import { Text } from '@/components/common/Text';
 import { TextField } from '@/components/common/TextField';
 import { requestEmailCode } from '@/services/emailVerification';
-import { useAuthStore } from '@/store/authStore';
+import { isLegacyAccount, useAuthStore } from '@/store/authStore';
 import { useTheme } from '@/theme';
 import { normalizeEmail, validateEmail } from '@/utils/authValidation';
 
@@ -18,7 +18,7 @@ type Step = 'email' | 'code' | 'password' | 'word' | 'done';
 const SUBTITLES: Record<Step, string> = {
   email: 'Te enviaremos un código a tu correo para confirmar que eres tú.',
   code: 'Escribe el código que te enviamos.',
-  password: 'Correo verificado. Elige tu nueva contraseña.',
+  password: 'Correo verificado. Elige tu nueva contraseña: cerraremos tu sesión en todos tus dispositivos.',
   word: 'Usa la palabra de recuperación que elegiste al registrarte.',
   done: 'Ya puedes volver a entrar con tu nueva contraseña.',
 };
@@ -26,24 +26,23 @@ const SUBTITLES: Record<Step, string> = {
 export default function ForgotPassword() {
   const router = useRouter();
   const theme = useTheme();
-  const resetPassword = useAuthStore((state) => state.resetPassword);
-  const resetWithEmail = useAuthStore((state) => state.resetPasswordWithVerifiedEmail);
+  const resetWithCode = useAuthStore((state) => state.resetPassword);
+  const resetWithWord = useAuthStore((state) => state.resetPasswordWithWord);
+  // The recovery word only exists for accounts created on this device before the cloud.
+  const hasLegacyAccount = useAuthStore((state) => isLegacyAccount(state.account));
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [answer, setAnswer] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [challenge, setChallenge] = useState<{ id: string; resendAfter: number } | null>(null);
+  const [ticket, setTicket] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const sendCode = async () => {
     const emailError = validateEmail(email);
     if (emailError) return setError(emailError);
-    // Don't email a code for an account that isn't on this device.
-    const account = useAuthStore.getState().account;
-    if (!account || account.email !== normalizeEmail(email)) return setError('No encontramos esa cuenta en este dispositivo.');
-    if (account.provider && account.provider !== 'password') return setError('Esta cuenta no usa contraseña: entra con Google o Facebook.');
     setLoading(true); setError('');
     const sent = await requestEmailCode(email, 'recover');
     setLoading(false);
@@ -56,8 +55,8 @@ export default function ForgotPassword() {
     if (password !== confirm) return setError('Las contraseñas no coinciden.');
     setLoading(true); setError('');
     const result = step === 'word'
-      ? await resetPassword({ email, recoveryAnswer: answer, password })
-      : await resetWithEmail({ email, password });
+      ? await resetWithWord({ email, recoveryAnswer: answer, password })
+      : await resetWithCode({ email, password, ticket });
     setLoading(false);
     if (!result.ok) return setError(result.error);
     setStep('done');
@@ -86,7 +85,7 @@ export default function ForgotPassword() {
           purpose="recover"
           challengeId={challenge.id}
           resendAfterSeconds={challenge.resendAfter}
-          onVerified={() => { setError(''); setStep('password'); }}
+          onVerified={(verified) => { setTicket(verified); setError(''); setStep('password'); }}
           onChangeEmail={() => setStep('email')}
         />
       ) : (
@@ -97,9 +96,11 @@ export default function ForgotPassword() {
           {step === 'email' ? (
             <>
               <Button label="Enviarme un código" size="lg" fullWidth loading={loading} onPress={sendCode} />
-              <Pressable onPress={() => { setError(''); setStep('word'); }} accessibilityRole="button" style={{ minHeight: 44, justifyContent: 'center' }}>
-                <Text variant="body" color="secondary" center>¿No tienes acceso a tu correo? <Text variant="bodyStrong" color="brand">Usa tu palabra de recuperación</Text></Text>
-              </Pressable>
+              {hasLegacyAccount ? (
+                <Pressable onPress={() => { setError(''); setStep('word'); }} accessibilityRole="button" style={{ minHeight: 44, justifyContent: 'center' }}>
+                  <Text variant="body" color="secondary" center>¿No tienes acceso a tu correo? <Text variant="bodyStrong" color="brand">Usa tu palabra de recuperación</Text></Text>
+                </Pressable>
+              ) : null}
             </>
           ) : null}
           {step === 'word' ? (

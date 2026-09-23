@@ -18,6 +18,8 @@ import { ThemeProvider, useTheme } from '@/theme';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
+import { useSyncStore } from '@/store/syncStore';
+import { useSyncEngine } from '@/hooks/useSyncEngine';
 import { useFinancialStore } from '@/store/financialStore';
 import { useSharedStore } from '@/store/sharedStore';
 
@@ -87,12 +89,14 @@ export default function RootLayout() {
   const authHydrated = useAuthStore((s) => s.hydrated);
   const finHydrated = useFinancialStore((s) => s.hydrated);
   const sharedHydrated = useSharedStore((s) => s.hydrated);
+  const syncHydrated = useSyncStore((s) => s.hydrated);
   const [loadDelayed, setLoadDelayed] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setLoadDelayed(true), 5000);
     return () => clearTimeout(timer);
   }, []);
-  const ready = (fontsLoaded || fontError || loadDelayed) && appHydrated && authHydrated && finHydrated && sharedHydrated;
+  const ready = (fontsLoaded || fontError || loadDelayed) && appHydrated && authHydrated && finHydrated && sharedHydrated && syncHydrated;
+  useSyncEngine(Boolean(ready));
 
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {});
@@ -106,7 +110,7 @@ export default function RootLayout() {
         {loadDelayed ? 'Está tomando más de lo esperado. Puedes intentar cargar de nuevo.' : 'Preparando tu AlcancIA…'}
       </Text>
       {loadDelayed ? <Pressable accessibilityRole="button" onPress={() => {
-        for (const store of [useAppStore, useAuthStore, useFinancialStore, useSharedStore]) {
+        for (const store of [useAppStore, useAuthStore, useFinancialStore, useSharedStore, useSyncStore]) {
           Promise.resolve(store.persist.rehydrate()).catch(() => {});
         }
       }} style={{ padding: 16 }}><Text style={{ color: '#007F5F', fontWeight: '700' }}>Volver a intentar</Text></Pressable> : null}

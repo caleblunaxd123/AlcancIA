@@ -25,7 +25,8 @@ export function EmailCodeStep({
   purpose: EmailCodePurpose;
   challengeId: string;
   resendAfterSeconds: number;
-  onVerified: () => Promise<void> | void;
+  /** Receives the server ticket that proves this code was verified. */
+  onVerified: (ticket: string) => Promise<void> | void;
   onChangeEmail: () => void;
 }) {
   const theme = useTheme();
@@ -61,7 +62,7 @@ export function EmailCodeStep({
       input.current?.focus();
       return;
     }
-    await onVerified();
+    await onVerified(result.ticket);
     inFlight.current = false;
     setVerifying(false);
   };

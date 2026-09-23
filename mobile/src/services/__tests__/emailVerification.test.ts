@@ -36,9 +36,9 @@ describe('emailVerification service', () => {
   });
 
   it('verifies only 6-digit codes and reports server rejections', async () => {
-    const fetchMock = respond(200, { verified: true });
+    const fetchMock = respond(200, { verified: true, ticket: 'firmado' });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
-    expect(await verifyEmailCode({ challengeId: 'x', email: 'ana@mail.com', purpose: 'register', code: '12 34 56' })).toEqual({ ok: true });
+    expect(await verifyEmailCode({ challengeId: 'x', email: 'ana@mail.com', purpose: 'register', code: '12 34 56' })).toEqual({ ok: true, ticket: 'firmado' });
     expect(JSON.parse(fetchMock.mock.calls[0]![1].body).code).toBe('123456');
 
     expect((await verifyEmailCode({ challengeId: 'x', email: 'ana@mail.com', purpose: 'register', code: '123' })).ok).toBe(false);
