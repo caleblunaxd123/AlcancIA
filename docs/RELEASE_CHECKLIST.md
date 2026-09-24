@@ -45,7 +45,8 @@ _Actualizado: 2026-09-23. Guía paso a paso en [DEPLOY.md](DEPLOY.md)._
 - [x] Política de privacidad y términos dentro de la app (Ley 29733), enlazados desde el registro y Mi cuenta
 - [x] Borrado de cuenta dentro de la app (requisito de Google Play y App Store)
 - [x] Descarga de datos (derecho de acceso)
-- [ ] Completar `[COMPLETAR]` (titular y RUC) en `mobile/src/content/legal.ts` y publicar el texto en una URL
+- [x] Titular y RUC en `mobile/src/content/legal.ts` (Caleb Daniel Luna Solis, RUC 10750638398)
+- [ ] Publicar la política y los términos en una URL pública
 - [ ] Ficha de tienda: descripción, capturas, ícono 512 px, gráfico destacado, categoría "Finanzas"
 - [ ] Formulario de seguridad de datos de Google Play (datos recopilados: nombre, correo, info financiera; cifrados en tránsito; el usuario puede pedir su eliminación)
 - [ ] Cuenta Apple Developer para iOS

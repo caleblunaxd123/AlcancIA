@@ -61,6 +61,5 @@ La pantalla de consentimiento está en modo **Testing** (solo usuarios de prueba
 
 ## 4. Textos legales
 El texto de la política y los términos vive en `mobile/src/content/legal.ts`. Antes de publicar:
-- Reemplaza `[COMPLETAR: …]` con el nombre/razón social y RUC del titular.
 - Publica el mismo texto en una URL pública (las tiendas la piden), por ejemplo `https://TU-DOMINIO/privacidad`.
 - Si tratas datos de residentes en Perú a escala, evalúa la inscripción del banco de datos ante la Autoridad Nacional de Protección de Datos Personales.

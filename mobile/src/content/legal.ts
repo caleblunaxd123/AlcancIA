@@ -1,11 +1,10 @@
 /**
  * Privacy policy and terms shown in the app. The same text must be published at
- * a public URL for the stores (see docs/RELEASE_CHECKLIST.md). Items marked
- * [COMPLETAR] need the owner's legal data before release.
+ * a public URL for the stores (see docs/RELEASE_CHECKLIST.md).
  */
 
 export const LEGAL_CONTACT_EMAIL = 'legadoancestral95@gmail.com';
-export const LEGAL_OWNER = '[COMPLETAR: nombre o razón social del titular y RUC]';
+export const LEGAL_OWNER = 'Caleb Daniel Luna Solis (RUC 10750638398)';
 export const LEGAL_UPDATED = '23 de septiembre de 2026';
 
 export type LegalSection = { title: string; body: string[] };
