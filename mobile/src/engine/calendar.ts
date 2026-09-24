@@ -68,3 +68,20 @@ export function eventsByDay(events: CalendarEvent[]): Map<number, CalendarEvent[
   }
   return map;
 }
+
+/**
+ * Month grid for a real calendar view, weeks starting on Monday (Peru).
+ * Each cell is a day number or null for the padding before/after the month.
+ */
+export function monthGrid(year: number, month: number): (number | null)[][] {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const offset = (new Date(year, month, 1).getDay() + 6) % 7; // Mon=0 … Sun=6
+  const cells: (number | null)[] = [
+    ...Array.from({ length: offset }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
+}

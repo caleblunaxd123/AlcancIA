@@ -71,9 +71,9 @@ export function MissionCard({ mission, completed = false, onPress, compact = fal
         />
 
         <View style={{ width: '62%', gap: theme.spacing.sm }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ gap: 2 }}>
             <Text variant="caption" color="secondary">{completed ? 'Completada' : mission.progressLabel}</Text>
-            {!compact ? <Text variant="caption" color="positive">+{mission.reward} semillas</Text> : null}
+            {!compact ? <Text variant="caption" color="positive">Premio: +{mission.reward} semillas</Text> : null}
           </View>
           <AnimatedProgress progress={progress} tone="positive" height={8} trackColor={theme.scheme === 'light' ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.13)'} />
         </View>

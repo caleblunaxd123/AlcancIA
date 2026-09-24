@@ -72,3 +72,15 @@ describe('simulatePurchase', () => {
     expect(sim.headline.toLowerCase()).not.toContain('no compres');
   });
 });
+
+describe('shortfall', () => {
+  it('reports how much is missing instead of hiding it at zero', () => {
+    const snap = snapshot();
+    const within = simulatePurchase(snap, 1000);
+    expect(within.shortfall.minor).toBe(0);
+    const tooMuch = simulatePurchase(snap, within.before.minor + 5000);
+    expect(tooMuch.wouldExceed).toBe(true);
+    expect(tooMuch.shortfall.minor).toBe(5000);
+    expect(tooMuch.headline).toBe('No te alcanza sin tocar tus pagos');
+  });
+});

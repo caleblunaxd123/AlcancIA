@@ -95,7 +95,7 @@ export default function TransactionDetail() {
         {editable ? <Button label="Editar movimiento" variant="secondary" icon="pencil" fullWidth onPress={() => router.push({ pathname: '/movimiento/nuevo', params: { id: transaction.id } })} /> : (
           <Card variant="insight"><Text variant="caption" color="secondary">Este movimiento está enlazado a una meta o deuda. Para mantener los saldos consistentes puedes revertirlo eliminándolo.</Text></Card>
         )}
-        <Button label="Eliminar movimiento" variant="ghost" icon="trash-2" fullWidth onPress={confirmDelete} />
+        <Button label="Eliminar movimiento" variant="danger" icon="trash-2" fullWidth onPress={confirmDelete} />
       </ScrollView>
     </Screen>
   );

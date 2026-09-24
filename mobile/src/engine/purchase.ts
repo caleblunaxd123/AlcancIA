@@ -18,6 +18,8 @@ export type PurchaseSimulation = {
   cost: Money;
   /** Whether the purchase would push safe-to-spend below zero. */
   wouldExceed: boolean;
+  /** How much money is missing when it exceeds (0 otherwise). */
+  shortfall: Money;
   obligationsCovered: boolean;
   /** Impact on the highest-priority active goal, if any. */
   goalImpact: {
@@ -30,7 +32,7 @@ export type PurchaseSimulation = {
 const VERDICT_COPY: Record<PurchaseVerdict, string> = {
   compatible: 'Compatible con tus planes',
   tight: 'Posible, pero reduce tu margen',
-  compromises: 'Comprometería obligaciones registradas',
+  compromises: 'No te alcanza sin tocar tus pagos',
 };
 
 function pickPrimaryGoal(goals: Goal[]): Goal | null {
@@ -84,6 +86,7 @@ export function simulatePurchase(
     after,
     cost,
     wouldExceed,
+    shortfall: money(Math.max(0, -rawAfter.minor), currency),
     obligationsCovered,
     goalImpact,
     headline: VERDICT_COPY[verdict],

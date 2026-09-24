@@ -1,4 +1,4 @@
-import { eventsByDay, eventsForMonth } from '@/engine/calendar';
+import { eventsByDay, eventsForMonth, monthGrid } from '@/engine/calendar';
 import { fromMajor } from '@/engine/money';
 import type { FinancialSnapshot } from '@/types/domain';
 
@@ -66,5 +66,20 @@ describe('eventsByDay', () => {
 
   it('returns an empty map for an empty month', () => {
     expect(eventsByDay([]).size).toBe(0);
+  });
+});
+
+describe('monthGrid', () => {
+  it('starts weeks on Monday and pads the edges', () => {
+    // September 2026 starts on a Tuesday and has 30 days.
+    const weeks = monthGrid(2026, 8);
+    expect(weeks[0]).toEqual([null, 1, 2, 3, 4, 5, 6]);
+    expect(weeks[weeks.length - 1]).toEqual([28, 29, 30, null, null, null, null]);
+    expect(weeks.flat().filter((d) => d !== null)).toHaveLength(30);
+  });
+
+  it('handles a month that starts on Sunday and leap Februaries', () => {
+    expect(monthGrid(2026, 1)[0]).toEqual([null, null, null, null, null, null, 1]); // Feb 1 2026 = Sunday
+    expect(monthGrid(2028, 1).flat().filter((d) => d !== null)).toHaveLength(29);
   });
 });

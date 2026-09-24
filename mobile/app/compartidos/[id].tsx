@@ -170,8 +170,9 @@ export default function GroupDetail() {
                     <View style={{ flex: 1 }}>
                       <Text variant="bodyStrong" numberOfLines={1}>{e.description}</Text>
                       <Text variant="caption" color="secondary" numberOfLines={1}>
-                        {formatDayMonth(e.date)} · {nameOf(e.paidBy) === 'Tú' ? 'Pagaste tú' : `Pagó ${nameOf(e.paidBy)}`} · tu parte {formatMoney(money(myShare))}
+                        {formatDayMonth(e.date)} · {nameOf(e.paidBy) === 'Tú' ? 'Pagaste tú' : `Pagó ${nameOf(e.paidBy)}`}
                       </Text>
+                      <Text variant="caption" color="muted" numberOfLines={1}>Tu parte: {formatMoney(money(myShare))}</Text>
                     </View>
                     <Text variant="moneySmall">{formatMoney(e.amount, { hideDecimalsWhenRound: true })}</Text>
                     <Pressable onPress={() => confirmDeleteExpense(e.id, e.description)} accessibilityRole="button" accessibilityLabel={`Eliminar ${e.description}`} hitSlop={10}>

@@ -119,9 +119,9 @@ export default function CanIBuyIt() {
             <Icon name="arrow-right" size={24} color="brand" />
             <View style={{ flex: 1, alignItems: 'center', gap: theme.spacing.xs }}>
               <Text variant="label" color="muted">
-                Disponible después
+                {sim.wouldExceed ? 'Te faltarían' : 'Disponible después'}
               </Text>
-              <Money amount={sim.after} size="medium" color={sim.wouldExceed ? 'negative' : 'positive'} />
+              <Money amount={sim.wouldExceed ? sim.shortfall : sim.after} size="medium" color={sim.wouldExceed ? 'negative' : 'positive'} />
             </View>
           </View>
         </Card>

@@ -70,6 +70,9 @@ export default function GoalDetail() {
   }
 
   const sooner = boosted ? daysSooner(base, boosted) : 0;
+  // No monthly plan yet: the slider IS the plan, so show when it gets there.
+  const hasPlan = goal.monthlyContribution.minor > 0;
+  const planMonths = !hasPlan && extra > 0 ? boosted?.monthsRemaining ?? null : null;
 
   const onContribute = () => {
     const amount = Number(contribution.replace(',', '.'));
@@ -131,12 +134,12 @@ export default function GoalDetail() {
               <Text variant="caption" color="muted">
                 Al ritmo actual
               </Text>
-              <Text variant="bodyStrong">{base.etaDate ? formatMonthYear(base.etaDate) : '—'}</Text>
+              <Text variant="bodyStrong">{base.etaDate ? formatMonthYear(base.etaDate) : 'Sin aporte mensual'}</Text>
             </View>
-            {sooner > 0 && boosted?.etaDate ? (
+            {(sooner > 0 || planMonths != null) && boosted?.etaDate ? (
               <View style={{ alignItems: 'flex-end' }}>
                 <Text variant="caption" color="muted">
-                  Con tu aporte extra
+                  {hasPlan ? 'Con tu aporte extra' : `Con S/ ${extra} al mes`}
                 </Text>
                 <Text variant="bodyStrong" color="positive">
                   {formatMonthYear(boosted.etaDate)}
@@ -148,7 +151,7 @@ export default function GoalDetail() {
 
         <Card>
           <ScenarioSlider
-            label="Aporte mensual extra"
+            label={hasPlan ? 'Aporte mensual extra' : 'Si ahorras cada mes'}
             min={0}
             max={500}
             step={50}
@@ -159,7 +162,18 @@ export default function GoalDetail() {
             }}
             formatValue={(v) => `S/ ${v}`}
           />
-          {sooner > 0 ? (
+          {planMonths != null ? (
+            <Animated.View entering={theme.reducedMotion ? undefined : FadeIn} style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, marginTop: theme.spacing.lg }}>
+              <Icon name="sparkles" size={16} color="positive" />
+              <Text variant="body" color="secondary" style={{ flex: 1 }}>
+                Ahorrando S/ {extra} al mes completas tu meta en <Text variant="bodyStrong" color="positive">{planMonths} {planMonths === 1 ? 'mes' : 'meses'}</Text>.
+              </Text>
+            </Animated.View>
+          ) : !hasPlan && extra === 0 ? (
+            <Text variant="caption" color="muted" style={{ marginTop: theme.spacing.md }}>
+              Mueve el control para ver en cuánto tiempo llegas.
+            </Text>
+          ) : sooner > 0 ? (
             <Animated.View entering={theme.reducedMotion ? undefined : FadeIn} style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, marginTop: theme.spacing.lg }}>
               <Icon name="sparkles" size={16} color="positive" />
               <Text variant="body" color="secondary" style={{ flex: 1 }}>
