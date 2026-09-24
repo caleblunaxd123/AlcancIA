@@ -41,6 +41,17 @@ curl https://api.TU-DOMINIO/health/ready          # {"status":"ready"}
 curl -I https://api.TU-DOMINIO/health             # Strict-Transport-Security, no-store
 ```
 
+### Opción actual: Cloudflare Tunnel desde la PC (beta)
+Hoy la API corre así: **`https://alcancia.lunalav.pe`** → túnel de Cloudflare `alcancia` → contenedor `alcancia-api` (imagen de producción) en `127.0.0.1:8080` → PostgreSQL `alcancia-db`. No abre puertos en el router; el certificado HTTPS lo pone Cloudflare. Es un túnel **separado** del de LunaLav (`lunalav-pc`).
+
+- Configuración: `%USERPROFILE%/.cloudflared/alcancia.yml` (credenciales del túnel en el mismo directorio; no se suben al repo).
+- Levantar la API: script que pasa los user-secrets como variables al contenedor sin mostrarlos (el contenedor tiene `--restart unless-stopped`, vuelve solo si Docker Desktop está abierto).
+- Levantar el túnel:
+  ```bash
+  cloudflared tunnel --config %USERPROFILE%/.cloudflared/alcancia.yml run alcancia
+  ```
+- Limitación: solo funciona con la PC encendida y Docker abierto. Para 24/7 se despliega la misma imagen en la nube y se cambia el CNAME `alcancia` en Cloudflare; la app no cambia de URL.
+
 ## 2. App (Expo EAS)
 
 1. `npm i -g eas-cli && eas login`, luego en `mobile/`: `eas init` (crea el proyecto y agrega `extra.eas.projectId` y `owner` a `app.json`).
