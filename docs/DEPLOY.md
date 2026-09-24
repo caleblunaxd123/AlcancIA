@@ -50,7 +50,10 @@ Hoy la API corre así: **`https://alcancia.lunalav.pe`** → túnel de Cloudflar
   ```bash
   cloudflared tunnel --config %USERPROFILE%/.cloudflared/alcancia.yml run alcancia
   ```
-- Limitación: solo funciona con la PC encendida y Docker abierto. Para 24/7 se despliega la misma imagen en la nube y se cambia el CNAME `alcancia` en Cloudflare; la app no cambia de URL.
+- **Arranque automático**: tarea programada de Windows **"AlcancIA - Servidor"** (al iniciar sesión, sin permisos de administrador). Ejecuta `ops/windows/start-alcancia.ps1`: abre Docker Desktop, levanta `alcancia-db` y `alcancia-api` y el túnel. Registro: `%LOCALAPPDATA%/AlcancIA/autostart.log` y `tunnel.log`.
+  - Instalar: `powershell -ExecutionPolicy Bypass -File ops/windows/register-autostart.ps1`
+  - Quitar: `Unregister-ScheduledTask -TaskName 'AlcancIA - Servidor' -Confirm:$false`
+- Limitación: solo funciona con la PC encendida y **con tu sesión de Windows iniciada** (la tarea corre al iniciar sesión). Para 24/7 se despliega la misma imagen en la nube y se cambia el CNAME `alcancia` en Cloudflare; la app no cambia de URL.
 
 ## 2. App (Expo EAS)
 
