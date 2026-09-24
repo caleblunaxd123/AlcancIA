@@ -100,3 +100,21 @@ describe('computeNextStep', () => {
     expect(result.href.startsWith('/')).toBe(true);
   });
 });
+
+describe('record-spending counts manual expenses', () => {
+  it('manual expenses tagged "manual" count; goal contributions do not', () => {
+    const base = computeNextStep;
+    const tx = (id: string, operation?: 'manual' | 'goal-contribution') => ({
+      id, kind: 'expense' as const, amount: { minor: 1000, currency: 'PEN' as const }, category: 'food' as const,
+      description: 'x', date: '2026-09-20', certainty: 'real' as const, source: 'manual' as const, operation,
+    });
+    const snap = {
+      currentBalance: { minor: 100000, currency: 'PEN' as const }, safetyBuffer: { minor: 0, currency: 'PEN' as const },
+      income: [{ id: 'i', amount: { minor: 300000, currency: 'PEN' as const }, description: 'Sueldo', frequency: 'monthly' as const, nextDate: '2026-09-30' }],
+      recurring: [], goals: [], debts: [], subscriptions: [],
+      transactions: [tx('a', 'manual'), tx('b', 'manual'), tx('c', 'manual'), tx('d', 'goal-contribution')],
+    };
+    expect(base(snap).id).not.toBe('record-spending');
+    expect(base({ ...snap, transactions: [tx('a', 'manual'), tx('d', 'goal-contribution'), tx('e', 'goal-contribution')] }).id).toBe('record-spending');
+  });
+});

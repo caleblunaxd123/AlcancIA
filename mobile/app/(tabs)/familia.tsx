@@ -177,7 +177,7 @@ function PrivacyNote() {
     <View style={{ flexDirection: 'row', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.xs }}>
       <Icon name="lock" size={15} color="muted" />
       <Text variant="caption" color="muted" style={{ flex: 1 }}>
-        Tus grupos viven en tu celular. Solo cuenta lo que tú agregas a cada grupo: tus movimientos personales siguen siendo privados.
+        Tus grupos se respaldan cifrados en tu cuenta. Solo cuenta lo que agregas a cada grupo: tus movimientos personales siguen siendo privados y las otras personas del grupo no los ven.
       </Text>
     </View>
   );

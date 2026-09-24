@@ -99,7 +99,9 @@ export function computeNextStep(
     || snapshot.transactions.some((t) => t.kind === 'income');
   if (!hasIncome) return step('register-income');
 
-  const expenses = snapshot.transactions.filter((t) => t.kind === 'expense' && !t.operation);
+  // Real spending the user logged (not goal contributions or debt payments,
+  // which the app records itself). New entries are tagged 'manual'.
+  const expenses = snapshot.transactions.filter((t) => t.kind === 'expense' && (t.operation ?? 'manual') === 'manual');
   if (expenses.length < 3) return step('record-spending');
 
   if (snapshot.goals.length === 0) return step('create-goal');
