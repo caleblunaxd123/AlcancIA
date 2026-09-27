@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -8,8 +8,10 @@ import { Card } from '@/components/common/Card';
 import { Icon } from '@/components/common/Icon';
 import { Text } from '@/components/common/Text';
 import { MoneyCounter } from './MoneyCounter';
-import { formatMoney, toMajor } from '@/engine/money';
+import { computeAllocation } from '@/engine/allocation';
+import { formatMoney, money, toMajor } from '@/engine/money';
 import type { SafeToSpendLine, SafeToSpendResult } from '@/engine/safeToSpend';
+import { useFinancialStore } from '@/store/financialStore';
 import { useTheme } from '@/theme';
 import { formatDayMonth } from '@/utils/date';
 
@@ -73,6 +75,15 @@ export function SafeToSpendCard({ result, onAskCanIBuy }: SafeToSpendCardProps) 
   );
 }
 
+function MonthRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+      <Text variant={strong ? 'bodyStrong' : 'body'} style={{ flex: 1 }}>{label}</Text>
+      <Text variant={strong ? 'bodyStrong' : 'body'} color={strong ? 'brand' : 'primary'}>{value}</Text>
+    </View>
+  );
+}
+
 /** Plain-language reason for each line, instead of "Confirmado/Programado". */
 function lineCaption(line: SafeToSpendLine): string {
   if (line.key === 'balance') return 'Lo que tienes hoy';
@@ -98,10 +109,14 @@ export function SafeToSpendBreakdownSheet({
   result: SafeToSpendResult;
 }) {
   const theme = useTheme();
+  const snapshot = useFinancialStore((s) => s.snapshot);
+  const month = useMemo(() => computeAllocation(snapshot), [snapshot]);
+  const fixedMinor = month.slices.find((s) => s.id === 'obligations')?.amount.minor ?? 0;
+  const monthLeft = money(month.income.minor - fixedMinor, month.currency);
   return (
     <BottomSheet visible={visible} onClose={onClose} title="¿Cómo lo calculamos?">
         <Text variant="body" color="secondary" style={{ marginBottom: theme.spacing.sm }}>
-          Partimos de tu saldo y apartamos lo que ya tiene destino (pagos, ahorro y un colchón). Lo que queda es lo que puedes gastar tranquilo.
+          Partimos del dinero que tienes hoy y apartamos lo que debes pagar antes de tu próximo ingreso (pagos, ahorro y un colchón). Lo que queda es lo que puedes gastar tranquilo.
         </Text>
         {result.breakdown.map((line, i) => (
           <Animated.View
@@ -137,11 +152,31 @@ export function SafeToSpendBreakdownSheet({
             marginTop: theme.spacing.md,
           }}
         >
-          <Text variant="subtitle">Puedes gastar</Text>
-          <Text variant="moneyMedium" color="positive">
-            {formatMoney(result.amount)}
+          <Text variant="subtitle">{result.clamped ? 'Te faltan' : 'Puedes gastar'}</Text>
+          <Text variant="moneyMedium" color={result.clamped ? 'negative' : 'positive'}>
+            {formatMoney(result.clamped ? result.shortfall : result.amount)}
           </Text>
         </View>
+        {result.clamped ? (
+          <Text variant="caption" color="secondary" style={{ marginTop: theme.spacing.xs }}>
+            Lo que tienes hoy no alcanza para los pagos que vienen antes de que cobres. Si tu saldo real es mayor, regístralo como ingreso; si no, esos pagos saldrán de tu próximo sueldo.
+          </Text>
+        ) : null}
+
+        {!month.incomeUnknown ? (
+          <View style={{ marginTop: theme.spacing.lg, padding: theme.spacing.md, borderRadius: theme.radius.lg, backgroundColor: theme.colors.brand.soft, gap: theme.spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
+              <Icon name="calendar-range" size={16} color="brand" />
+              <Text variant="bodyStrong">Tu mes completo</Text>
+            </View>
+            <MonthRow label="Ingresas" value={formatMoney(month.income, { hideDecimalsWhenRound: true })} />
+            <MonthRow label="Pagos fijos, deudas y suscripciones" value={`−${formatMoney(money(fixedMinor, month.currency), { hideDecimalsWhenRound: true })}`} />
+            <MonthRow label="Te queda para gastar y ahorrar" value={formatMoney(monthLeft, { hideDecimalsWhenRound: true })} strong />
+            <Text variant="caption" color="secondary">
+              Ese dinero llega con tu sueldo{result.nextIncomeDate ? ` (${formatDayMonth(result.nextIncomeDate)})` : ''}. Lo de arriba es lo que puedes usar hoy, con el dinero que ya tienes.
+            </Text>
+          </View>
+        ) : null}
 
         {result.coveredByNextIncome.length > 0 ? (
           <View

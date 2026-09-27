@@ -12,6 +12,7 @@ import { formatMoney, subtract, toMajor } from '@/engine/money';
 import type { WeatherResult } from '@/engine/weather';
 import { useTheme } from '@/theme';
 import type { Money } from '@/types/money';
+import { formatDayMonth } from '@/utils/date';
 import { personalGreeting, todayLabel } from '@/utils/greeting';
 
 export type HomeHeroProps = {
@@ -134,7 +135,18 @@ export function HomeHero({ name, weather, balance, onOpenMenu }: HomeHeroProps) 
             ? `Faltan ${sts.daysUntilIncome} día${sts.daysUntilIncome === 1 ? '' : 's'} para tu ingreso · Saldo total ${mask(balance)}`
             : `Saldo total ${mask(balance)} · Registra tu ingreso para afinar el cálculo`}
         </Text>
-        {reserved.minor > 0 ? (
+        {sts.clamped ? (
+          // The balance does not cover what is due before payday: say it plainly.
+          <View
+            accessibilityLiveRegion="polite"
+            style={{ flexDirection: 'row', gap: theme.spacing.sm, alignItems: 'flex-start', marginTop: theme.spacing.sm, padding: theme.spacing.md, borderRadius: theme.radius.lg, backgroundColor: 'rgba(251,191,36,0.18)' }}
+          >
+            <Icon name="triangle-alert" size={18} rawColor="#FCD34D" />
+            <Text variant="caption" style={{ color: theme.colors.hero.text, flex: 1 }}>
+              Tus pagos {hasIncome && sts.nextIncomeDate ? `hasta el ${formatDayMonth(sts.nextIncomeDate)}` : 'del mes'} suman más que tu saldo: <Text variant="caption" style={{ color: '#FCD34D', fontWeight: '700' }}>te faltan {mask(sts.shortfall)}</Text>. Si tu saldo real es mayor, actualízalo registrando un ingreso.
+            </Text>
+          </View>
+        ) : reserved.minor > 0 ? (
           <Text variant="caption" style={{ color: theme.colors.hero.textMuted }}>
             Ya apartamos {mask(reserved)} para tus pagos, ahorro y un colchón.
           </Text>

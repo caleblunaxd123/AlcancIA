@@ -100,7 +100,9 @@ export function computeAllocation(snapshot: FinancialSnapshot, now: Date = new D
 
   const spendingMinor = snapshot.transactions
     .filter((t) => {
-      if (t.kind !== 'expense' || t.operation) return false;
+      // Real spending the user logged ('manual' or untagged legacy), not goal
+      // contributions or debt payments (those are savings/obligations).
+      if (t.kind !== 'expense' || (t.operation ?? 'manual') !== 'manual') return false;
       const date = parseISO(t.date);
       return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
     })

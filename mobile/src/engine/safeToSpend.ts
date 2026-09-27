@@ -28,6 +28,11 @@ export type SafeToSpendResult = {
   amount: Money;
   /** Whether the result was clamped to zero for display. */
   clamped: boolean;
+  /**
+   * When clamped: how much is missing to cover everything reserved before the
+   * next income. Showing "S/ 0" alone hides the real problem.
+   */
+  shortfall: Money;
   currency: CurrencyCode;
   /** Days until the next expected income. */
   daysUntilIncome: number;
@@ -216,6 +221,7 @@ export function calculateSafeToSpend(
   return {
     amount: clampToZero(available),
     clamped,
+    shortfall: money(clamped ? -available.minor : 0, currency),
     currency,
     daysUntilIncome,
     nextIncomeDate: nextIncome ? nextIncome.income.nextDate : null,

@@ -106,3 +106,23 @@ describe('calculateSafeToSpend', () => {
     expect(result.coveredByNextIncome).toHaveLength(0);
   });
 });
+
+describe('shortfall when the balance does not cover the period', () => {
+  it('reports how much is missing instead of only showing zero', () => {
+    const snap = baseSnapshot();
+    snap.currentBalance = fromMajor(500);
+    snap.goals = [];
+    snap.income[0]!.nextDate = '2026-10-25';
+    snap.recurring[0]!.dayOfMonth = 30; // rent 900 due before payday
+    const result = calculateSafeToSpend(snap, new Date('2026-09-27T12:00:00'));
+    expect(result.clamped).toBe(true);
+    expect(result.amount.minor).toBe(0);
+    // 500 - 900 rent - 100 buffer = -500
+    expect(result.shortfall.minor).toBe(50000);
+  });
+
+  it('shortfall is zero when there is room', () => {
+    const result = calculateSafeToSpend(baseSnapshot(), new Date('2026-01-01T12:00:00'));
+    expect(result.shortfall.minor).toBe(0);
+  });
+});

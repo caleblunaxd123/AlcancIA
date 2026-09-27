@@ -189,3 +189,17 @@ describe('computeAllocation', () => {
     expect(result.slices.find((s) => s.id === 'spending')?.amount.minor).toBe(2500);
   });
 });
+
+describe('spending counts manual expenses', () => {
+  it('includes expenses tagged "manual" and excludes goal contributions', () => {
+    const snap = baseSnapshot();
+    snap.income = [{ id: 'i', amount: fromMajor(3800), description: 'Sueldo', frequency: 'monthly', nextDate: '2026-10-25' }];
+    const now = new Date('2026-09-15T12:00:00');
+    snap.transactions = [
+      { id: 'm', kind: 'expense', amount: fromMajor(50), category: 'food', description: 'Cena', date: '2026-09-10', certainty: 'real', source: 'manual', operation: 'manual' },
+      { id: 'g', kind: 'expense', amount: fromMajor(1000), category: 'savings', description: 'Aporte', date: '2026-09-10', certainty: 'real', source: 'manual', operation: 'goal-contribution' },
+    ] as FinancialSnapshot['transactions'];
+    const spending = computeAllocation(snap, now).slices.find((s) => s.id === 'spending')!;
+    expect(spending.amount.minor).toBe(5000);
+  });
+});
