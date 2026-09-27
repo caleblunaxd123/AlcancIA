@@ -28,10 +28,22 @@ export default function Register() {
   // Step 2: the account is created only after the emailed code is verified.
   const [challenge, setChallenge] = useState<{ id: string; resendAfter: number } | null>(null);
   const strength = passwordStrength(password);
-  const canSubmit = useMemo(() => name.trim().length >= 2 && !validateEmail(email) && !validatePassword(password) && password === confirm && accepted, [name, email, password, confirm, accepted]);
+  // The first thing still missing, in plain words (null = ready to continue).
+  const blocker = useMemo(() => {
+    if (name.trim().length < 2) return 'Escribe tu nombre.';
+    const emailProblem = validateEmail(email);
+    if (emailProblem) return emailProblem;
+    const passwordProblem = validatePassword(password);
+    if (passwordProblem) return `Contraseña: ${passwordProblem.charAt(0).toLowerCase()}${passwordProblem.slice(1)}`;
+    if (!confirm) return 'Repite tu contraseña en "Confirmar contraseña".';
+    if (password !== confirm) return 'Las contraseñas no coinciden. Tócalas con el ojo para compararlas.';
+    if (!accepted) return 'Marca la casilla para aceptar los términos.';
+    return null;
+  }, [name, email, password, confirm, accepted]);
+  const canSubmit = blocker == null;
 
   const submit = async () => {
-    if (!canSubmit) return setError(password !== confirm ? 'Las contraseñas no coinciden.' : 'Revisa los campos y acepta el aviso de privacidad.');
+    if (blocker) return setError(blocker);
     setLoading(true); setError('');
     const sent = await requestEmailCode(email, 'register');
     setLoading(false);
@@ -87,7 +99,12 @@ export default function Register() {
           </Text>
         </Pressable>
         {error ? <Text variant="caption" color="negative" accessibilityLiveRegion="polite">{error}</Text> : null}
-        {!canSubmit ? <Text variant="caption" color="secondary">Completa los campos, confirma tu contraseña y marca la casilla para crear tu cuenta.</Text> : null}
+        {blocker ? (
+          <View style={{ flexDirection: 'row', gap: theme.spacing.xs, alignItems: 'center' }}>
+            <Icon name="info" size={14} color="warning" />
+            <Text variant="caption" color="secondary" style={{ flex: 1 }} accessibilityLiveRegion="polite">Falta: {blocker}</Text>
+          </View>
+        ) : null}
         <Button label="Continuar" size="lg" fullWidth disabled={!canSubmit} loading={loading} onPress={submit} />
         <Text variant="caption" color="muted" center>Te enviaremos un código a tu correo para confirmar que es tuyo.</Text>
         <Pressable onPress={() => router.replace('/auth/login')} accessibilityRole="button"><Text variant="body" color="secondary" center>¿Ya tienes cuenta? <Text variant="bodyStrong" color="brand">Inicia sesión</Text></Text></Pressable>
